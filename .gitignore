@@ -1,0 +1,10 @@
+
+tags
+*.o
+*.a
+bin/*
+*.swp
+*.depend
+*.archive
+config
+include/platform.h
