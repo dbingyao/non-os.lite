@@ -240,7 +240,7 @@ static int ftspi020_DMA_NormalMode(uint32_t Channel,	// use which channel for AH
 		DMAChannel.csr.prot = 0;	/* protect bits */
 		DMAChannel.csr.priority = Priority;	/* priority */
 		DMAChannel.csr.reserved0 = 0;
-		DMAChannel.csr.tc_msk = 0;	/* disable terminal count */
+		DMAChannel.csr.tc_msk = 1;	/* disable terminal count */
 
 		fLib_SetDMAChannelCfg(Channel, DMAChannel.csr);
 
@@ -298,7 +298,6 @@ int ftspi020_Start_DMA(uint32_t Channel,	// use which channel for AHB DMA, 0..7
 	uint32_t eDstAddr;
 
 	fLib_DisableDMAChannel(Channel);
-	DMAReg->dma_int_tc_clr = 1;
 
 	if (DstCtrl == 0)
 		eDstAddr = DstAddr + Size;
@@ -322,10 +321,9 @@ int ftspi020_Start_DMA(uint32_t Channel,	// use which channel for AHB DMA, 0..7
 
 	intrStatus = 0;
 	do {
-		if (DMAReg->dma_tc & (1 << Channel) && 
-		    (DMAReg->dma_ch[Channel].dst_addr == eDstAddr)) {
-			//DMAReg->dma_int_tc_clr = (1 << Channel);
-			//intrStatus |= 1;
+		if (DMAReg->dma_tc & (1 << Channel)) {
+			DMAReg->dma_int_tc_clr = (1 << Channel);
+			intrStatus |= 1;
 			break;
 		}
 
