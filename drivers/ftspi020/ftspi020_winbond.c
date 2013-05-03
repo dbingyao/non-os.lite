@@ -45,18 +45,20 @@ static const struct winbond_spi_flash_params winbond_spi_flash_table[] = {
 	{0x1840, 256, 65536, 4096, "W25Q128BV"},
 };
 
-char *w25_er_string[W25_MAX_ERASE_TYPE] = {
+char *w25_er_string[W25_MAX_ERASE_TYPE + 1] = {
 	"Sector Erase",
 	"32KB Block Erase",
-	"64KB Block Erase"
+	"64KB Block Erase",
+	"Invalid erase type"
 };
 
-char *w25_wr_string[W25_MAX_WRITE_TYPE] = {
+char *w25_wr_string[W25_MAX_WRITE_TYPE + 1] = {
 	"Page Program",
-	"Quad Input Page Program"
+	"Quad Input Page Program",
+	"Invalid write type"
 };
 
-char *w25_rd_string[W25_MAX_READ_TYPE] = {
+char *w25_rd_string[W25_MAX_READ_TYPE + 1] = {
 	"Read",
 	"Fast Read",
 	"Fast Read Dual Output",
@@ -64,6 +66,7 @@ char *w25_rd_string[W25_MAX_READ_TYPE] = {
 	"Fast Read Quad Output",
 	"Fast Read Quad IO",
 	"Word Read Quad IO",
+	"Invalied read type"
 };
 
 uint32_t w25_wait_ms;
@@ -554,21 +557,24 @@ static int dataflash_erase_fast_w25(struct spi_flash *flash, uint8_t type, uint3
 	uint8_t cmd_code;
 	uint32_t wait_t;
 
-	if (type ==  W25_SECTOR_ERASE) {
-		cmd_code =  WINBOND_ERASE_SECTOR;
+	if (type == W25_SECTOR_ERASE) {
+		cmd_code = WINBOND_ERASE_SECTOR;
 		erase_size = flash->erase_sector_size;
 		wait_t = 200;
-	} else if (type ==  W25_BLOCK_32K_ERASE) {
+	} else if (type == W25_BLOCK_32K_ERASE) {
 		cmd_code =  WINBOND_ERASE_32K_BLOCK;
 		erase_size = 32 << 10;
 		wait_t = 800;
-	} else {
+	} else if (type == W25_BLOCK_64K_ERASE) {
 		cmd_code = WINBOND_ERASE_64K_BLOCK;
 		erase_size = 64 << 10;
 		wait_t = 1000;
+	} else {
+		prints("%s: %s @ 0x%x\n", flash->name, w25_er_string[type], addr);
+		return 1;
 	}
 
-	offset = offset + erase_size + ~(erase_size - 1);
+	offset &=  ~(erase_size - 1);
 
 	if (winbond_check_status_till_ready(flash, 100))
 		return 1;

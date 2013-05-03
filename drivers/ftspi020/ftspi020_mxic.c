@@ -37,25 +37,28 @@ static const struct mxic_spi_flash_params mxic_spi_flash_table[] = {
 	{0x1820, 256, 65536, 4096, "MX25L12845EM1"},
 };
 
-char *mx25_er_string[MX25_MAX_ERASE_TYPE] = {
+char *mx25_er_string[MX25_MAX_ERASE_TYPE + 1] = {
 	"Sector Erase",
 	"32KB Block Erase",
-	"64KB Block Erase"
+	"64KB Block Erase",
+	"Invalid erase type"
 };
 
-char *mx25_wr_string[MX25_MAX_WRITE_TYPE] = {
+char *mx25_wr_string[MX25_MAX_WRITE_TYPE + 1]= {
 	"Page Program",
-	"4xI/O Page Program"
+	"4xI/O Page Program",
+	"Invalid write type"
 };
 
-char *mx25_rd_string[MX25_MAX_READ_TYPE] = {
+char *mx25_rd_string[MX25_MAX_READ_TYPE + 1] = {
 	"Read",
 	"Fast Read",
 	"Fast Double Transfer Rate Read",
 	"2xI/O Read Mode",
 	"2xI/O Doube Transfer Rate Read",
 	"4xI/O Read Mode",
-	"4xI/O Doube Transfer Rate Read"
+	"4xI/O Doube Transfer Rate Read",
+	"Invalid read type"
 };
 
 uint32_t mx25_wait_ms;
@@ -516,13 +519,16 @@ static int dataflash_erase_fast_mx25(struct spi_flash *flash, uint8_t type, uint
 		cmd_code = MXIC_ERASE_32K_BLOCK;
 		erase_size = 32 << 10;
 		wait_t = 2000;
-	} else {
+	} else if (type ==  MX25_BLOCK_64K_ERASE) {
 		cmd_code = MXIC_ERASE_64K_BLOCK;
 		erase_size = 64 << 10;
 		wait_t = 2000;
+	} else {
+		prints("%s: %s @ 0x%x\n", flash->name, mx25_er_string[type], addr);
+		return 1;
 	}
 
-	offset = offset + erase_size + ~(erase_size - 1);
+	offset &= ~(erase_size - 1);
 
 	if (mxic_check_status_till_ready(flash, 100))
 		return 1;
