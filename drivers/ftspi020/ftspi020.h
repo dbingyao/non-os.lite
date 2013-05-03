@@ -29,7 +29,7 @@ typedef enum {
 	DMA
 } Transfer_type;
 
-#define FTSPI020_FW_VERSION "ver:13.04.24"
+#define FTSPI020_FW_VERSION "ver:13.05.02"
 
 /*
  * How many CEs available on system?
@@ -202,7 +202,7 @@ extern int ftspi020_Start_DMA(uint32_t Channel,	// use which channel for AHB DMA
 #define SPI020_DATA_PORT		0x0100
 
 // =====================================   Common commands   =====================================
-#define CMD_READ_ID  	                0x9f
+#define CMD_READ_ID  	                0x9F
 #define CMD_RESET			0xFF
 // ===================================== Variable and Struct =====================================
 enum {

@@ -295,14 +295,8 @@ int ftspi020_Start_DMA(uint32_t Channel,	// use which channel for AHB DMA, 0..7
 		       uint32_t Priority)	// priority for this chaanel 0(low)/1/2/3(high)
 {
 	uint32_t LLPSize, Count, intrStatus;
-	uint32_t eDstAddr;
 
 	fLib_DisableDMAChannel(Channel);
-
-	if (DstCtrl == 0)
-		eDstAddr = DstAddr + Size;
-	else
-		eDstAddr = DstAddr;	
 
 	LLPSize = ftspi020_data_getDmacMaxSize(SrcWidth, SrcSize);
 	if ((Size / (1 << SrcWidth)) > LLPSize) { //the Size is too large to move in one LLP in the IP

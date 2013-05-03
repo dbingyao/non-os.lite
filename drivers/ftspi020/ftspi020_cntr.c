@@ -162,7 +162,7 @@ int FTSPI020_init(void)
 #error  "Specify correct platform name."
 #endif
 
-	FTSPI020_DMA_LLD_STRUCT_ADDR = (int) malloc(0x800);
+	FTSPI020_DMA_LLD_STRUCT_ADDR = (int) malloc(0x2000);
 	if (!FTSPI020_DMA_LLD_STRUCT_ADDR) {
 		prints("Allocate memory for DMA LLD structure failed\n");
 		return 1;
