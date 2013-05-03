@@ -26,16 +26,35 @@ led_addr:
 #if defined ROM_NOR || defined ROM_SPI
 .macro  wait_sdram
 	ldr	r0, =DDRC_REG_BASE
-	mov	r2, #0
 1:
 	ldr     r1, [r0, #0x8]
 	cmp     r1, #0
-	add	r2, r2, #1
 	bne     1b                                                                                                                                           
+.endm
+
+.macro init_cpu
+	/*
+	 * flush v4 I/D caches
+	 */
+	mov     r0, #0
+	mcr     p15, 0, r0, c7, c7, 0   /* flush v3/v4 cache */
+	mcr     p15, 0, r0, c8, c7, 0   /* flush v4 TLB */
+
+	/*
+	 * disable MMU stuff and caches
+	 */
+	mrc     p15, 0, r0, c1, c0, 0
+	bic     r0, r0, #0x00002300     @ clear bits 13, 9:8 (--V- --RS)
+	bic     r0, r0, #0x00000087     @ clear bits 7, 2:0 (B--- -CAM)
+	orr     r0, r0, #0x00000002     @ set bit 2 (A) Align
+	orr     r0, r0, #0x00001000     @ set bit 12 (I) I-Cache
+	mcr     p15, 0, r0, c1, c0, 0
 .endm
 
 	.globl	init_ddr
 init_ddr:
+	init_cpu
+
 	led     0x10
 
 	ldr	r0, =DDRC_REG_BASE 
