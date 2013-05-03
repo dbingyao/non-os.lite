@@ -189,14 +189,28 @@ int FTSPI020_erase(int argc, char * const argv[])
 	}
 
 	if (argc == 6) {
+		int offset, e_offset, len;
 		// Prepare the golden buf for comparing.
-		memset(golden_buf, 0xFF, size);
+		memset(golden_buf, 0xFF, g_spi020_rd_buf_length);
 
-		memset(read_buf, 0, size);
-		spi_flash_info[ce]->read(spi_flash_info[ce], atoi(argv[5]), addr, size, read_buf);
-		if (FTSPI020_compare(golden_buf, read_buf, size)) {
-			prints("Empty checking failed in Sector Erase\n");
-			return 0;
+		offset = addr;
+		e_offset = addr + size;
+		len = g_spi020_rd_buf_length;
+
+		while(size > 0) {
+
+			if (offset + len > e_offset)
+				len = e_offset - offset;
+
+			memset(read_buf, 0, len);
+			spi_flash_info[ce]->read(spi_flash_info[ce], atoi(argv[5]), offset, len, read_buf);
+			if (FTSPI020_compare(golden_buf, read_buf, len)) {
+				prints("Empty checking failed in erase type %d\n", type);
+				return 0;
+			}
+
+			size -= len;
+			offset += len;
 		}
 	}
 
@@ -230,7 +244,7 @@ int FTSPI020_erase_all(int argc, char * const argv[])
 		
 		offset = 0;
 		if (argc == 3) {
-			rd_size_each_times = (spi_flash_info[ce]->size >> 4);
+			rd_size_each_times = g_spi020_rd_buf_length;
 			// Prepare the golden buf for comparing.
 			memset(golden_buf, 0xFF, rd_size_each_times);
 
@@ -362,8 +376,8 @@ int FTSPI020_burnin(int argc, char * const argv[])
 			if (er_type == spi_flash_info[ce]->max_er_type) {
 				if (start_pos == 0)
 					err = spi_flash_info[ce]->erase_all(spi_flash_info[ce]);
-
-				err = spi_flash_info[ce]->erase(spi_flash_info[ce], 0, start_pos,
+				else
+					err = spi_flash_info[ce]->erase(spi_flash_info[ce], 0, start_pos,
 								spi_flash_info[ce]->size);
 			 } else 
 				err = spi_flash_info[ce]->erase(spi_flash_info[ce], er_type, start_pos,
