@@ -143,7 +143,7 @@
  * FTSPI020 SPI Flash Controller
  */
 #define FTSPI020_REG_BASE	0xE0000000
-#define	FTSPI020_IRQ    	12
+#define	FTSPI020_IRQ    	7
 
 /**
  * Common for all platforms
