@@ -262,7 +262,7 @@ void do_irq (struct pt_regs *pt_regs)
 	/* Prevent Nested interrupts */
 	disable_interrupts();
 
-	vintc_is = *((volatile int *) intr_reg_base);
+	vintc_is = *((volatile int *) (intr_reg_base + 0x14));
 
 	irq = 0;
 	while (vintc_is) {
