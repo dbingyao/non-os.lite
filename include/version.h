@@ -37,7 +37,7 @@
 
 #define PRINT_IMG_VERS \
 	do { \
-		prints("\n   Boot mode Platform(%s-2013-04-23(%s)) \n", IMGTYPE, PLATFORM); } \
+		prints("\n   Boot mode Platform(%s-2013-05-08(%s)) \n", IMGTYPE, PLATFORM); } \
 	while (0)
 
 #endif

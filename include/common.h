@@ -151,4 +151,7 @@ extern void irq_install_handler (int irq, interrupt_handler_t handle_irq, void *
 extern void irq_set_enable(int irq);
 extern void irq_set_disable(int irq);
 
+/* Timer controller */
+void disable_timer(int timer_index);
+extern int init_timer(int timer_index, int load_val, int use_extclk, void timer_callback(void));
 #endif /* _COMMON_H */

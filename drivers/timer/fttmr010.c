@@ -22,8 +22,6 @@
 
 #include "fttmr010.h"
 
-#define TIMER_LOAD_VAL	0xffffffff
-
 struct _time_handler {
 	void (*m_func)(void);
 };
@@ -34,8 +32,10 @@ static void fttmr010_t3_isr(void *data);
 static struct _time_handler timer_handler[3];
 
 static unsigned long long tbu, tbl;
-volatile struct fttmr010 * tmr;
+static int timer_load_val[3];
+volatile struct fttmr010 * tmr = (struct fttmr010 *) TIMERC_REG_BASE;
 
+#if 0
 int timer_init(void)
 {
 	unsigned int cr;
@@ -74,13 +74,14 @@ int timer_init(void)
 
 	return 0;
 }
+#endif
 
 /*
  * Get the current 64 bit timer tick count
  */
 unsigned long long get_ticks(void)
 {
-	ulong now = TIMER_LOAD_VAL - tmr->cfg[0].timer_counter;
+	ulong now = timer_load_val[0] - tmr->cfg[0].timer_counter;
 
 	/* increment tbu if tbl has rolled over */
 	if (now < tbl)
@@ -118,14 +119,34 @@ static void fttmr010_t3_isr(void *data)
 
 	tmr->cr |= FTTMR010_TM3_ENABLE;
 }
-/**
- * Init timer for app
- */
-int init_timer(int timer_index, int load_val, void  timer_callback(void))
+
+void disable_timer(int timer_index)
 {
 	int idx;
 
-	if (timer_index < 2 || timer_index > 3) {
+	if (timer_index < 1 || timer_index > 3) {
+		prints("%s: index out of range\n", __func__);
+		return 1;
+	}
+
+	idx = timer_index - 1;
+
+	tmr->cfg[idx].timer_load =
+	tmr->cfg[idx].timer_counter =
+	tmr->cfg[idx].timer_match2 =
+	tmr->cfg[idx].timer_match1 = 0;
+
+	tmr->cr &= ~(FTTMR010_TM1_ENABLE << (idx * 3));
+}
+
+/**
+ * Init timer for app
+ */
+int init_timer(int timer_index, int load_val, int use_extclk, void  timer_callback(void))
+{
+	int idx, cr;
+
+	if (timer_index < 1 || timer_index > 3) {
 		prints("%s: index out of range\n", __func__);
 		return 1;
 	}
@@ -133,6 +154,8 @@ int init_timer(int timer_index, int load_val, void  timer_callback(void))
 	prints(" %s: index %d load val %d\n", __func__, timer_index, load_val);
 
 	idx = timer_index - 1;
+
+	timer_load_val[idx] = load_val;
 
 	/* setup timer */
 	tmr->cfg[idx].timer_load =
@@ -156,9 +179,28 @@ int init_timer(int timer_index, int load_val, void  timer_callback(void))
 		       FTTMR010_TM1_OVERFLOW) << (3 * idx));
 	}
 
+	cr = FTTMR010_TM1_ENABLE;
+
+	if (use_extclk)
+		cr |= FTTMR010_TM1_CLOCK;
+
 	/* Enable timer and count down */
-	tmr->cr |= ((FTTMR010_TM1_ENABLE | FTTMR010_TM1_CLOCK) << (3 * idx)) ;
+	tmr->cr |= (cr << (3 * idx)) ;
 
 	return 0;
 }
 
+
+void init_global_timer(int load_val, int use_extclk)
+{
+
+	init_timer(0, load_val, use_extclk, 0);
+
+	irq_set_type(TIMERC_IRQ2, IRQ_TYPE_EDGE_RISING);
+	irq_install_handler(TIMERC_IRQ2, fttmr010_t2_isr, 0);
+	irq_set_enable(TIMERC_IRQ2);
+
+	irq_set_type(TIMERC_IRQ3, IRQ_TYPE_EDGE_RISING);
+	irq_install_handler(TIMERC_IRQ3, fttmr010_t3_isr, 0);
+	irq_set_enable(TIMERC_IRQ3);
+}

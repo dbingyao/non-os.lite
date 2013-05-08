@@ -16,9 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
+#define TIMER_LOAD_VAL	0xffffffff
+
+extern int interrupt_init(void);
+extern void init_global_timer(int load_val, int use_extclk);
 
 void board_init(void)
 {
+	/* Interrupt */
+	interrupt_init();
+
+	/* Init default timer */
+	init_global_timer(TIMER_LOAD_VAL, 0);
 }
-
-

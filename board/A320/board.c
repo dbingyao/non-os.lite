@@ -23,7 +23,10 @@
 #include <platform.h>
 #include <flash.h>
 
-extern unsigned long long get_ticks(void);
+#define TIMER_LOAD_VAL	0xffffffff
+
+extern int interrupt_init(void);
+extern void init_global_timer(int load_val, int use_extclk);
 
 ulong board_flash_get_legacy(ulong base, int banknum, flash_info_t *info)
 {
@@ -60,7 +63,12 @@ void ftpmu010_32768osc_enable(void)
 
 void board_init(void)
 {
+	/* Interrupt */
+	interrupt_init();
+
+	/* Init default timer */
 	ftpmu010_32768osc_enable();
+	init_global_timer(TIMER_LOAD_VAL, 1);
 }
 
 

@@ -23,28 +23,21 @@
 #include <malloc.h>
 
 extern int uart_init(int reg_base, int baud_rate);
-extern int interrupt_init(void);
-extern int timer_init(void);
 extern int board_init(void);
 
 extern flash_info_t flash_info[];       /* info for FLASH chips */
 
 void hardware_init()
 {
-	unsigned long flash_size;
+	uart_init(UART0_REG_BASE, UART_BAUD_38400);
 
 	board_init();
-
-	uart_init(UART0_REG_BASE, UART_BAUD_38400);
 
 	PRINT_IMG_VERS;
 	prints("-------------------------------------------------\n");
 
 	mem_malloc_init();
 
-	interrupt_init();
-
-	timer_init();
 }
 
 void main()

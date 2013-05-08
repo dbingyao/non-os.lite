@@ -156,35 +156,31 @@ void pointer(void)
 		buffer[i-1] = i;
 
 	prints(" %s\n", __func__);
-
 	prints("&buffer: 0x%08x, buffer: 0x%08x\n", (int) &buffer, (int) ((int *)buffer));
 	prints("&posArr: 0x%08x, posArr[0]: 0x%08x\n", (int) &posArr, (int) ((int *)posArr));
-
 	prints("posArr[0]: 0x%08x, posArr[1]: 0x%08x\n", (int) ((int *)&posArr[0]), (int) ((int *)&posArr[1]));
-	
+	prints(" ary = 0x%08x, &p1 = 0x%08x, &p2=0x%08x, &pp1= 0x%08x\n",
+		(int) ary, (int) &p1, (int) &p2, (int)&pp1);
 
-        prints(" ary = 0x%08x, &p1 = 0x%08x, &p2=0x%08x, &pp1= 0x%08x\n", 
-		 (int) ary, (int) &p1, (int) &p2, (int)&pp1);
-        p1 = ary;
-        p2 = &ary[1];
-        pp1 = &p1;
-        prints(" p1 = 0x%08x[%d], p2 = 0x%08x[%d], pp1 = 0x%08x[0x%08x [%d]]\n",
-                 (int)p1, (int)*p1, (int)p2, (int)*p2, (int)pp1, (int)*pp1, (int)**pp1);
+	p1 = ary;
+	p2 = &ary[1];
+	pp1 = &p1;
+	prints(" p1 = 0x%08x[%d], p2 = 0x%08x[%d], pp1 = 0x%08x[0x%08x [%d]]\n",
+		(int)p1, (int)*p1, (int)p2, (int)*p2, (int)pp1, (int)*pp1, (int)**pp1);
 
-        *pp1 = p2;
-        prints(" p1 = 0x%08x[%d], p2 = 0x%08x[%d], pp1 = 0x%08x[0x%08x [%d]]\n",
-                 (int)p1, (int)*p1, (int)p2, (int)*p2, (int)pp1, (int)*pp1, (int)**pp1);
+	*pp1 = p2;
+	prints(" p1 = 0x%08x[%d], p2 = 0x%08x[%d], pp1 = 0x%08x[0x%08x [%d]]\n",
+		(int)p1, (int)*p1, (int)p2, (int)*p2, (int)pp1, (int)*pp1, (int)**pp1);
 
-        *p1 -= 1;
-        prints(" p1 = 0x%08x[%d], p2 = 0x%08x[%d], pp1 = 0x%08x[0x%08x [%d]]\n",
-                 (int)p1, (int)*p1, (int)p2, (int)*p2, (int)pp1, (int)*pp1, (int)**pp1);
-        p1 = &ary[2];
-        prints(" p1 = 0x%08x[%d], p2 = 0x%08x[%d], pp1 = 0x%08x[0x%08x [%d]]\n",
-                 (int)p1, (int)*p1, (int)p2, (int)*p2, (int)pp1, (int)*pp1, (int)**pp1);
-        **pp1 += 1;
-        prints(" p1 = 0x%08x[%d], p2 = 0x%08x[%d], pp1 = 0x%08x[0x%08x [%d]]\n",
-                 (int)p1, (int)*p1, (int)p2, (int)*p2, (int)pp1, (int)*pp1, (int)**pp1);
-
+	*p1 -= 1;
+	prints(" p1 = 0x%08x[%d], p2 = 0x%08x[%d], pp1 = 0x%08x[0x%08x [%d]]\n",
+		(int)p1, (int)*p1, (int)p2, (int)*p2, (int)pp1, (int)*pp1, (int)**pp1);
+	p1 = &ary[2];
+	prints(" p1 = 0x%08x[%d], p2 = 0x%08x[%d], pp1 = 0x%08x[0x%08x [%d]]\n",
+		(int)p1, (int)*p1, (int)p2, (int)*p2, (int)pp1, (int)*pp1, (int)**pp1);
+	**pp1 += 1;
+	prints(" p1 = 0x%08x[%d], p2 = 0x%08x[%d], pp1 = 0x%08x[0x%08x [%d]]\n",
+		(int)p1, (int)*p1, (int)p2, (int)*p2, (int)pp1, (int)*pp1, (int)**pp1);
 }
 
 int do_spi_bootmode_test(int argc, char * const argv[])
@@ -193,8 +189,11 @@ int do_spi_bootmode_test(int argc, char * const argv[])
 
 	/* Enable timer and count down */
 	tick = 0;
-	init_timer(2, TIMERTEST_LOAD_VAL, timer2_tick_plus);
-
+#if defined PLATFORM_A320
+	init_timer(2, TIMERTEST_LOAD_VAL, 1, timer2_tick_plus);
+#else
+	init_timer(2, TIMERTEST_LOAD_VAL, 0, timer2_tick_plus);
+#endif
 	i = 0;
 	do {
 		/* 200 ms */
@@ -207,8 +206,10 @@ int do_spi_bootmode_test(int argc, char * const argv[])
 		prints(" ------------------------ \n");
 
 		// Press 'q' to leave the burnin
-		if ('q' == kbhit())
+		if ('q' == kbhit()) {
+			disable_timer(2);
 			break;
+		}
 
 		i++;
 	} while (1);
