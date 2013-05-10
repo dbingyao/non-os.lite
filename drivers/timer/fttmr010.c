@@ -194,7 +194,7 @@ int init_timer(int timer_index, int load_val, int use_extclk, void  timer_callba
 void init_global_timer(int load_val, int use_extclk)
 {
 
-	init_timer(0, load_val, use_extclk, 0);
+	init_timer(1, load_val, use_extclk, 0);
 
 	irq_set_type(TIMERC_IRQ2, IRQ_TYPE_EDGE_RISING);
 	irq_install_handler(TIMERC_IRQ2, fttmr010_t2_isr, 0);
