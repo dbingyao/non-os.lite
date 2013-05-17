@@ -21,6 +21,8 @@
 
 #define FTSPI020_REQ_SEL	4
 
+extern clock_t t0_perf;
+
 int FTSPI020_DMA_LLD_STRUCT_ADDR;
 static uint32_t ftspi020_data_getDmacMaxSize(uint32_t src_width, uint32_t busrt_size);
 
@@ -311,6 +313,7 @@ int ftspi020_Start_DMA(uint32_t Channel,	// use which channel for AHB DMA, 0..7
 		return 1;
 	}
 
+	t0_perf = get_timer(0);
 	fLib_EnableDMAChannel(Channel);
 
 	intrStatus = 0;

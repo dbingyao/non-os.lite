@@ -180,7 +180,7 @@ int FTSPI020_init(void)
 	disable_interrupts();
 	FTSPI020_cmd_complete_intr_enable(0);
 
-	g_spi020_wr_buf_length =  g_spi020_rd_buf_length = 0x100000;
+	g_spi020_wr_buf_length =  g_spi020_rd_buf_length = 0x800000;
 	g_spi020_wr_buf_addr = (int) malloc(g_spi020_wr_buf_length << 1);
 	if (!g_spi020_wr_buf_addr) {
 		prints("Allocate memory for read/write buffer failed\n");
@@ -460,11 +460,15 @@ void FTSPI020_data_access(uint8_t * dout, uint8_t * din, uint32_t len)
 
 		if (dout != NULL) {
 			ret = ftspi020_Start_DMA(FTSPI020_DMA_RD_CHNL, (int) dout,
-					(int) (FTSPI020_REG_BASE + SPI020_DATA_PORT), len, 0x00,
-					0x00, 4, 0, 2, FTSPI020_DMA_PRIORITY);
+					(int) (FTSPI020_REG_BASE + SPI020_DATA_PORT), len, 0x0,
+					0x0, 4, 0, 2, FTSPI020_DMA_PRIORITY);
 		} else if (din != NULL) {
+			/* Not multiple of 4 bytes */
+			if (len & 0x3)
+				len = (len + 4) & ~0x3;
+
 			ret = ftspi020_Start_DMA(FTSPI020_DMA_RD_CHNL, (int) (FTSPI020_REG_BASE + SPI020_DATA_PORT),
-					(int) din, len, 0x00, 0x00, 4, 2, 0, FTSPI020_DMA_PRIORITY);
+					(int) din, len, 0x2, 0x2, 2, 2, 0, FTSPI020_DMA_PRIORITY);
 		}
 
 		if (ret)

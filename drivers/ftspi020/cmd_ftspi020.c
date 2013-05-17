@@ -31,7 +31,7 @@ static int FTSPI020_list_ce(int argc, char * const argv[]);
 
 static cmd_t ftspi020_cmd_tbl[] = {
 	{"wr", "<ce> <type> <rowAddr> <DataCnt> [1:wr with cmp, 2: burn image]", FTSPI020_write},
-	{"rd", "<ce> <type> <rowAddr> <DataCnt>", FTSPI020_read},
+	{"rd", "<ce> <type> <rowAddr> <DataCnt> [show]", FTSPI020_read},
 	{"er", "<ce> <type> <rowAddr> <DataCnt> [er with cmp]", FTSPI020_erase},
 	{"er_all", "<ce list> [er with cmp]", FTSPI020_erase_all},
 	{"status", "<ce>", FTSPI020_report_status},
@@ -48,6 +48,7 @@ struct spi_flash *spi_flash_info[FTSPI020_MAX_CE];
 
 // For choosing the check status is via hw or sw.
 char g_check_status = check_status_by_hw;
+clock_t t0_perf;
 
 extern int g_cmd_intr_enable;
 
@@ -73,11 +74,8 @@ int FTSPI020_write(int argc, char * const argv [])
 		return 1;
 	}
 
-	if (!str_to_hex(argv[3], &addr, sizeof(addr) * 2))
-		return 1;
-
-	if (!str_to_hex(argv[4], &len, sizeof(len) * 2))
-		return 1;
+	addr = strtol(argv[3], 0, 0);
+	len = strtol(argv[4], 0, 0);
 
 	if (argc == 6)
 		burn = atoi(argv[5]);
@@ -102,7 +100,6 @@ int FTSPI020_write(int argc, char * const argv [])
 		}
 	}
 
-
 	if (spi_flash_info[ce]->write(spi_flash_info[ce], atoi(argv[2]), addr, len, write_buf))
 		return 0;
 
@@ -122,14 +119,14 @@ int FTSPI020_write(int argc, char * const argv [])
 	return 0;
 }
 
-/* rd <ce> <type> <rowAddr> <DataCnt> */
+/* rd <ce> <type> <rowAddr> <DataCnt> [show] */
 int FTSPI020_read(int argc, char * const argv[])
 {
 	int ce, addr, len;
 	char *read_buf = (char *) g_spi020_rd_buf_addr;
 	int *p;
 
-	if (argc != 5) {
+	if (argc < 5) {
 		prints("%d arguments for rd isn't allowed\n", argc);
 		return 1;
 	}
@@ -140,18 +137,42 @@ int FTSPI020_read(int argc, char * const argv[])
 		return 1;
 	} 
 
-	if (!str_to_hex(argv[3], &addr, sizeof(addr) * 2))
-		return 1;
-
-	if (!str_to_hex(argv[4], &len, sizeof(len) * 2))
-		return 1;
+	addr = strtol(argv[3], 0, 0);
+	len = strtol(argv[4], 0, 0);
 
 	memset(read_buf, 0, len);
 
 	spi_flash_info[ce]->read(spi_flash_info[ce], atoi(argv[2]), addr, len, read_buf);
 
-	p = (int *) read_buf;
-	prints("Data content: %x %x %x %x\n", p[0], p[1], p[2], p[3]);
+	if (argc > 5) {
+		int	i;
+
+		if (addr & 0xf) {
+			prints("0x%08x: ", (int)addr & ~0xf);
+
+			for (i = 0; i < (addr & 0xf); i++) {
+				prints("   ");
+			}
+		}
+
+		/* Write out page data */
+		for (i = 0; i < len; i++) {
+			if (((addr + i) & 0xf) == 0) {
+				if (i != 0) {
+					prints("\n");
+				}
+
+				prints("0x%08x: ", (int) (addr + i));
+			}
+
+			prints("%02x ",  read_buf[i]);
+		}
+
+
+	} else {
+		p = (int *) read_buf;
+		prints("Data content: %x %x %x %x\n", p[0], p[1], p[2], p[3]);
+	}
 
 	return 0;
 }
@@ -176,12 +197,8 @@ int FTSPI020_erase(int argc, char * const argv[])
         } 
 
 	type = atoi(argv[2]);
-
-	if (!str_to_hex(argv[3], &addr, sizeof(addr) * 2))
-		return 1;
-
-	if (!str_to_hex(argv[4], &size, sizeof(size) * 2))
-		return 1;
+	addr = strtol(argv[3], 0, 0);
+	size = strtol(argv[4], 0, 0);
 
 	if (spi_flash_info[ce]->erase(spi_flash_info[ce], type, addr, size)) {
 		prints("Erase Sector failed.\n");
@@ -433,15 +450,14 @@ int FTSPI020_burnin(int argc, char * const argv[])
 	return 0;
 }
 
-/* perf <ce> <len> */
+/* perf <ce> <len> [type] */
 int FTSPI020_report_performance(int argc, char * const argv[])
 {
 	int bytes, i;
-	clock_t t0;
 	char *read_buf/*, *write_buf*/;
-	int ce;
+	int ce, type;
 
-	if (argc != 3) {
+	if (argc < 3) {
 		prints("%d arguments for er isn't allowed\n", argc);
 		return 1;
 	}
@@ -452,7 +468,8 @@ int FTSPI020_report_performance(int argc, char * const argv[])
                 return 1;
         }
 
-	bytes = atoi(argv[2]);
+
+	bytes = strtol(argv[2], 0, 0);
 #if 0
 	// Prepare the pattern for writing & reading
 	write_buf = (chard *) g_spi020_wr_buf_addr;
@@ -463,15 +480,23 @@ int FTSPI020_report_performance(int argc, char * const argv[])
 #endif
 	read_buf = (char *) g_spi020_rd_buf_addr;
 
-	for (i = 0; i < spi_flash_info[ce]->max_rd_type; i++) {
-		t0 = get_timer(0);
-		spi_flash_info[ce]->read(spi_flash_info[ce], i, 0, bytes, read_buf);
-		prints("Rd:%d ms.\n", get_timer(0) - t0);
+	g_divider = 2;
+	FTSPI020_divider(g_divider);
 
-#if 0
-		//Error message print inside the function
-		FTSPI020_compare(write_buf, read_buf, bytes);
-#endif
+	if (argc == 4) {
+		type = atoi(argv[3]);
+		spi_flash_info[ce]->read(spi_flash_info[ce], type, 0, bytes, read_buf);
+		prints("Rd:%d ms.\n", get_timer(0) - t0_perf);
+	} else {
+		for (i = 0; i < spi_flash_info[ce]->max_rd_type ; i++) {
+			spi_flash_info[ce]->read(spi_flash_info[ce], i, 0, bytes, read_buf);
+			prints("Rd:%d ms.\n", get_timer(0) - t0_perf);
+
+	#if 0
+			//Error message print inside the function
+			FTSPI020_compare(write_buf, read_buf, bytes);
+	#endif
+		}
 	}
 
 	return 0;

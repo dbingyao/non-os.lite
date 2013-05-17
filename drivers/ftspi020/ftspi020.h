@@ -29,7 +29,7 @@ typedef enum {
 	DMA
 } Transfer_type;
 
-#define FTSPI020_FW_VERSION "ver:13.05.02"
+#define FTSPI020_FW_VERSION "ver:13.05.17"
 
 /*
  * How many CEs available on system?
@@ -62,7 +62,7 @@ typedef enum {
 #include "ftspi020_spansion.h"
 #endif
 
-#undef FTSPI020_USE_INTERRUPT
+#define FTSPI020_USE_INTERRUPT
 #define FTSPI020_USE_DMA
 
 #ifdef FTSPI020_USE_DMA
