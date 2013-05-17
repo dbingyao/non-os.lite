@@ -92,65 +92,6 @@ int scan_string(char *buf)
 	return count;
 }
 
-#define	ISHEX(c)	((((c>='0')&&(c<='9')) || ((c>='a')&&(c<='f')) || \
-			  ((c>='A')&&(c<'F'))) ? 1 : 0)
-
-int str_to_hex(char * str, void * num, int digits)
-{
-	char *value = (char *) num;
-	char ch, byte;
-	int i = 0, j;
-
-	if ((str[0] == '0') && ((str[1] == 'X') || (str[1] == 'x')))
-		str += 2;
-
-	while (str[i] != '\0') {
-		if (!ISHEX(str[i]))
-			return 0;
-		i++;
-	}
-
-	if ((i == 0) || (i > digits))
-		return 0;
-
-	i--;
-	for (j = 0; j < ((digits + 1) / 2); j++)
-		*value++ = 0;
-
-#ifdef __BIG_ENDIAN
-	value = (char *) num + (digits + 1) / 2 - 1;
-#else
-	value = (char *) num;
-#endif
-	while (i >= 0) {
-		byte = str[i--] - 48;
-		if (byte > 9) {
-			byte -= 7;
-			if (byte > 0xf)
-				byte -= 32;
-		}
-		if (i >= 0) {
-			ch = str[i--] - 48;
-			if (ch > 9) {
-				ch -= 7;
-				if (ch > 0xf)
-					ch -= 32;
-			}
-			byte += ch << 4;
-			*value = byte;
-#ifdef __BIG_ENDIAN
-			value--;
-#else
-			value++;
-#endif
-		} else {
-			*(char *) value = byte;
-			break;
-		}
-	}
-	return 1;
-}
-
 /* Usage: md <addr> [num] */
 int do_rd32(int argc, char * const  argv[])
 {
@@ -163,13 +104,11 @@ int do_rd32(int argc, char * const  argv[])
 	if ((argc < 2) || (argc > 3))
 		return 1;
 
-	if (!str_to_hex(argv[1], &addr, sizeof(addr) * 2))
-		return 1;
+	addr = strtol(argv[1], 0, 0);
 
-	if (argc == 3) {
-		if (!str_to_hex(argv[2], &num, sizeof(num) * 2))
-			return 1;
-	} else
+	if (argc == 3)
+		num = strtol(argv[2], 0, 0);
+	else
 		num = 4;
 
 	pd = (int *) addr;
@@ -203,21 +142,16 @@ int do_wr32(int argc, char * const  argv[])
 	if ((argc < 3) || (argc > 5))
 		return 1;
 
-	if (!str_to_hex(argv[1], &addr, sizeof(addr) * 2))
-		return 1;
-
-	if (!str_to_hex(argv[2], &data, sizeof(data) * 2))
-		return 1;
+	addr = strtol(argv[1], 0, 0);
+	data = strtol(argv[2], 0, 0);
 
 	num = 1;
 	datainc = 0;
 	if (argc >= 4) {
-		if (!str_to_hex(argv[3], &num, sizeof(num) * 2))
-			return 1;
-		if (argc == 5) {
-			if (!str_to_hex(argv[4], &datainc, sizeof(datainc) * 2))
-				return 1;
-		}
+		num = strtol(argv[3], 0, 0);
+
+		if (argc == 5)
+			datainc = strtol(argv[4], 0, 0);
 	}
 
 	pd = (int *) addr;

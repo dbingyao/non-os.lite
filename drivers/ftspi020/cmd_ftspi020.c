@@ -248,8 +248,7 @@ int FTSPI020_erase_all(int argc, char * const argv[])
 		return 1;
 	}
 
-	if (!str_to_hex(argv[1], &ce_list, sizeof(ce_list) * 2))
-		return 1;
+	ce_list = strtol(argv[1], 0, 0);
 
 	for (ce = 0; ce < FTSPI020_MAX_CE; ce++) {
 
@@ -324,8 +323,7 @@ int FTSPI020_burnin(int argc, char * const argv[])
                 return 1;
         }
 
-	if (!str_to_hex(argv[2], &start_pos, sizeof(start_pos) * 2))
-		return 1;
+	start_pos = strtol(argv[2], 0, 0);
 
 	write_buf = (char *) g_spi020_wr_buf_addr;
 	read_buf = (char *) g_spi020_rd_buf_addr;
