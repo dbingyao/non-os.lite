@@ -65,7 +65,7 @@ ddr3_config_table:
 
 	.globl remap
 remap:
-	led 	0x30000000
+	led 	0x3
 	//adjust DDRII sdram base to 0x0 after remap
 	//setup External Rank 0/1 Register
 	ldr	r0, =DDRC_REG_BASE + 0x10
