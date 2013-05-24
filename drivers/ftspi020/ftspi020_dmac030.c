@@ -141,7 +141,7 @@ int DMA_NoLLD(uint32_t Channel,   // use which channel for AHB DMA, 0..7
 	DMA_CHLinkList(Channel, DMAChannel.llp);
 
 	/* porgram address and size */
-	DMA_CHDataCtrl(Channel, SrcAddr, DstAddr, Size);
+	DMA_CHDataCtrl(Channel, SrcAddr, DstAddr, Size / (1 << SrcWidth));
 
 	*((uint32_t *)&(DMAChannel.llp)) = 1;	//this is to set master_id = 1, and link_list_addr = 0
 
@@ -162,7 +162,6 @@ int DMA_HandShakeMode(uint32_t Channel,   // use which channel for AHB DMA, 0..7
 		      uint32_t Priority)  // priority for this chaanel 0(low)/1/2/3(high)
 {
 	DMA_CH_t DMAChannel;
-	uint32_t xCount,yCount;
 
 	memset(&DMAChannel, 0, sizeof(DMA_CH_t));
 

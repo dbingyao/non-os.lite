@@ -177,6 +177,7 @@ void fLib_DMA_SetInterrupt(uint channel, uint tcintr, uint errintr, uint abtintr
 
 void fLib_DMA_ResetChannel(unchar channel)
 {
+#if 0
 	uint base = FTDMAC020_REG_BASE + DMA_CHANNEL0_BASE + channel*DMA_CHANNEL_OFFSET;
 	
 	outl(base+DMA_CHANNEL_CSR_OFFSET,0);
@@ -185,6 +186,10 @@ void fLib_DMA_ResetChannel(unchar channel)
 	outl(base+DMA_CHANNEL_DSTADDR_OFFSET,0);
 	outl(base+DMA_CHANNEL_LLP_OFFSET,0);
 	outl(base+DMA_CHANNEL_SIZE_OFFSET,0);
+#endif
+
+	memset(&DMAReg->dma_ch[channel], 0, sizeof(fLib_DMA_CH_t));
+
 }
 
 void fLib_DMA_ClearAllInterrupt()
