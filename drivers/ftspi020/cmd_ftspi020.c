@@ -18,6 +18,8 @@
 #include "ftspi020.h"
 #include "ftspi020_cntr.h"
 
+static int FTSPI020_check_erase(int ce, int offset, int size);
+
 static int FTSPI020_write(int argc, char * const argv[]);
 static int FTSPI020_read(int argc, char * const argv[]);
 static int FTSPI020_erase(int argc, char * const argv[]);
@@ -177,12 +179,39 @@ int FTSPI020_read(int argc, char * const argv[])
 	return 0;
 }
 
+static int FTSPI020_check_erase(int ce, int offset, int size)
+{
+	char *read_buf;
+	int i, len;
+
+	read_buf = (char *) ((g_spi020_rd_buf_addr + 0x10) & ~0xF);
+
+	while(size > 0) {
+
+		len = min_t(size, 0x400000);
+
+		memset(read_buf, 0, len);
+
+		spi_flash_info[ce]->read(spi_flash_info[ce], 0, offset, len, read_buf);
+
+		for (i=0; i < len; i++) {
+			if (read_buf[i] != 0xFF) {
+				prints("Erase: compare data failed at 0x%08x = 0x%x\n",
+					(int)(&read_buf[i]), read_buf[i]);
+				return 1;
+			}
+		}
+
+		size -= len;
+		offset += len;
+	}
+
+	return 0;
+}
+
 /* er <ce> <type> <rowAddr> <DataCnt> [er with rd] */
 int FTSPI020_erase(int argc, char * const argv[])
 {
-
-	char *golden_buf = (char *) g_spi020_wr_buf_addr;
-	char *read_buf = (char *) g_spi020_rd_buf_addr;
 	int ce, type, addr, size;
 
 	if (argc < 5) {
@@ -205,31 +234,8 @@ int FTSPI020_erase(int argc, char * const argv[])
 		return 0;
 	}
 
-	if (argc == 6) {
-		int offset, e_offset, len;
-		// Prepare the golden buf for comparing.
-		memset(golden_buf, 0xFF, g_spi020_rd_buf_length);
-
-		offset = addr;
-		e_offset = addr + size;
-		len = g_spi020_rd_buf_length;
-
-		while(size > 0) {
-
-			if (offset + len > e_offset)
-				len = e_offset - offset;
-
-			memset(read_buf, 0, len);
-			spi_flash_info[ce]->read(spi_flash_info[ce], atoi(argv[5]), offset, len, read_buf);
-			if (FTSPI020_compare(golden_buf, read_buf, len)) {
-				prints("Empty checking failed in erase type %d\n", type);
-				return 0;
-			}
-
-			size -= len;
-			offset += len;
-		}
-	}
+	if (argc == 6)
+		FTSPI020_check_erase(ce, addr, size);
 
 	return 0;
 }
@@ -238,10 +244,8 @@ int FTSPI020_erase(int argc, char * const argv[])
 int FTSPI020_erase_all(int argc, char * const argv[])
 {
 
-	char *golden_buf = (char *) g_spi020_wr_buf_addr;
 	char *read_buf = (char *) g_spi020_rd_buf_addr;
-	int rd_size_each_times;
-	int ce, ce_list, offset;
+	int ce, ce_list;
 
 	if (argc < 2) {
 		prints("%d arguments for er isn't allowed\n", argc);
@@ -258,22 +262,10 @@ int FTSPI020_erase_all(int argc, char * const argv[])
 		// Perform the erase operation.
 		spi_flash_info[ce]->erase_all(spi_flash_info[ce]);
 		
-		offset = 0;
-		if (argc == 3) {
-			rd_size_each_times = g_spi020_rd_buf_length;
-			// Prepare the golden buf for comparing.
-			memset(golden_buf, 0xFF, rd_size_each_times);
-
-			do {
-				memset(read_buf, 0, rd_size_each_times);
-				spi_flash_info[ce]->read(spi_flash_info[ce], atoi(argv[2]), offset, 
-							 rd_size_each_times, read_buf);
-				if (FTSPI020_compare(golden_buf, read_buf, rd_size_each_times))
-					break;
-				offset += rd_size_each_times;
-			} while (offset + rd_size_each_times <= spi_flash_info[ce]->size);
-		}
+		if (argc == 3)
+			FTSPI020_check_erase(ce, 0,  spi_flash_info[ce]->size);
 	}
+
 	return 0;
 }
 
@@ -400,6 +392,8 @@ int FTSPI020_burnin(int argc, char * const argv[])
 
 			er_tp_cnt[er_type]++;
 			er_type++;
+
+			err = FTSPI020_check_erase(ce, start_pos, spi_flash_info[ce]->size);
 
 			if (err)
 				break;
