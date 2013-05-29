@@ -108,5 +108,7 @@ int simple_printf  (const char *fmt, ...);
 #define sprintf(buf, fmt, args...)		simple_sprintf(buf, fmt, ## args)
 #define prints(fmt, args...)			simple_printf(fmt, ## args)
 
+int sscanf(const char *buf, const char *fmt, ...);
+int scanf(const char *fmt, ...);
 
 #endif	/* #ifndef _STDIO_H */

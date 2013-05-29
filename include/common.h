@@ -24,11 +24,12 @@
 #include <types.h>
 
 #define CONFIG_SYS_FLASH_CFI
+#define CONFIG_SYS_FLASH_LEGACY_512Kx8
 
 /* support JEDEC */
 #define CONFIG_FLASH_CFI_LEGACY
 
-#define PHYS_FLASH_1                    0x10000000
+#define PHYS_FLASH_1                    0x80000000
 #define CONFIG_SYS_FLASH_BASE           PHYS_FLASH_1
 
 #define CONFIG_SYS_MONITOR_BASE         PHYS_FLASH_1
