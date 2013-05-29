@@ -26,20 +26,20 @@ struct spansion_spi_flash_params {
 	uint16_t idcode1_2;
 	uint16_t page_size;
 	uint32_t nr_pages;
-	uint16_t sector_size;
+	uint16_t param_sector_erase_size;
 	const char *name;
 };
 
 static const struct spansion_spi_flash_params spansion_spi_flash_table[] = {
 
 	{0x1502, 256, 16384, 4096, "S25FL032P"},
-	{0x1820, 256, 65536, 4096, "S25FL0128P"},
+	{0x1820, 256, 65536, 4096, "S25FL0128S"},
+	{0x1902, 256, 131072, 4096, "S25FL0256S"},
 };
 
 char *span_er_string[S25_MAX_ERASE_TYPE + 1] = {
-	"Sector Erase",
-	"8KB Block Erase",
-	"64KB Block Erase",
+	"Parameter Sector Erase",
+	"64KB Sector Erase",
 	"Invalid erase type"
 };
 
@@ -93,7 +93,7 @@ wr_en:
 		return 1;
 	}
 
-	rd_sts_cmd[0] = SPANSION_READ_STATUS;
+	rd_sts_cmd[0] = SPANSION_READ_STATUS1;
 	if (spi_flash_cmd(flash, rd_sts_cmd, NULL, 0)) {
 		g_check_status = tmp;
 		return 1;
@@ -102,7 +102,7 @@ wr_en:
 	if (debug > 2)
 		prints(" Read status register 0x%x \n", &status[0]);
 
-	if (!(status[0] & SPANSION_STS_WEL_BIT)) {
+	if (!(status[0] & SPANSION_STS1_WEL_BIT)) {
 		prints(" Write Enable Latch bit not set \n");
 		goto wr_en;
 	}
@@ -121,7 +121,7 @@ wr_en:
 	else
 		status[1] &= ~SPANSION_CFG_QUAD_MODE;
 
-	wr_sts_cmd[0] = SPANSION_WRITE_STATUS_CONF;
+	wr_sts_cmd[0] = SPANSION_WRITE_REGISTER;
 	if (debug > 2)
 		prints(" Write status 0x%x 0x%x\n", status[0], status[1]);
 	if (spi_flash_cmd_write(flash, wr_sts_cmd, (const void *) &status[0], 2)) {
@@ -129,9 +129,11 @@ wr_en:
 		return 1;
 	}
 
-	/* Wait for Write Status Complete */
+	/* Due to Spansion datasheet Write Register(WRR)
+	 * write time, typical 140 ms, max 500 ms
+	 */
 	g_check_status = check_status_by_hw;
-	if (spansion_check_status_till_ready(flash, 100))
+	if (spansion_check_status_till_ready(flash, 500))
 		return 1;
 
 	g_check_status = check_status_by_sw;
@@ -194,8 +196,8 @@ static int spi_xfer_s25(struct spi_flash * flash, unsigned int len, const void *
 			spi_cmd.dtr_mode = dtr_disable;
 			spi_cmd.spi_mode = spi_operate_serial_mode;
 			break;
-		case SPANSION_ERASE_SECTOR:
-		case SPANSION_ERASE_8K_BLOCK:
+		case SPANSION_ERASE_PARAM_4K:
+		case SPANSION_ERASE_PARAM_8K:
 		case SPANSION_ERASE_64K_BLOCK:
 			spi_cmd.spi_addr =
 			    (*(data_out + 3) << 16) | (*(data_out + 2) << 8) | (*(data_out + 1));
@@ -211,15 +213,10 @@ static int spi_xfer_s25(struct spi_flash * flash, unsigned int len, const void *
 			spi_cmd.dtr_mode = dtr_disable;
 			spi_cmd.spi_mode = spi_operate_serial_mode;
 			break;
-		case SPANSION_READ_STATUS:
-			spi_cmd.ins_len = instr_1byte;
-			spi_cmd.write_en = spi_read;
-			spi_cmd.read_status_en = read_status_enable;
-			spi_cmd.read_status = read_status_by_hw;
-			spi_cmd.dtr_mode = dtr_disable;
-			spi_cmd.spi_mode = spi_operate_serial_mode;
-			break;
+		case SPANSION_READ_STATUS1:
+		case SPANSION_READ_STATUS2:
 		case SPANSION_READ_CONFIG:
+		case SPANSION_BANK_REG_READ:
 			spi_cmd.ins_len = instr_1byte;
 			spi_cmd.write_en = spi_read;
 			spi_cmd.read_status_en = read_status_enable;
@@ -227,7 +224,8 @@ static int spi_xfer_s25(struct spi_flash * flash, unsigned int len, const void *
 			spi_cmd.dtr_mode = dtr_disable;
 			spi_cmd.spi_mode = spi_operate_serial_mode;
 			break;
-		case SPANSION_WRITE_STATUS_CONF:
+		case SPANSION_WRITE_REGISTER:
+		case SPANSION_BANK_REG_WRITE:
 			spi_cmd.ins_len = instr_1byte;
 			spi_cmd.write_en = spi_write;
 			spi_cmd.spi_mode = spi_operate_serial_mode;
@@ -253,7 +251,7 @@ static int spi_xfer_s25(struct spi_flash * flash, unsigned int len, const void *
 			spi_cmd.read_status_en = read_status_disable;
 			spi_cmd.spi_mode = spi_operate_quad_mode;
 			break;
-		case SPANSION_READ_DATA:
+		case SPANSION_READ:
 			spi_cmd.spi_addr =
 			    (*(data_out + 3) << 16) | (*(data_out + 2) << 8) | (*(data_out + 1));;
 			spi_cmd.addr_len = addr_3byte;
@@ -276,7 +274,7 @@ static int spi_xfer_s25(struct spi_flash * flash, unsigned int len, const void *
 			spi_cmd.dtr_mode = dtr_disable;
 			spi_cmd.spi_mode = spi_operate_serial_mode;
 			break;
-		case SPANSION_DUAL_READ:
+		case SPANSION_READ_DUAL_OUT:
 			spi_cmd.spi_addr =
 			    (*(data_out + 3) << 16) | (*(data_out + 2) << 8) | (*(data_out + 1));;
 			spi_cmd.addr_len = addr_3byte;
@@ -288,7 +286,7 @@ static int spi_xfer_s25(struct spi_flash * flash, unsigned int len, const void *
 			spi_cmd.dtr_mode = dtr_disable;
 			spi_cmd.spi_mode = spi_operate_dual_mode;
 			break;
-		case SPANSION_QUAD_READ:
+		case SPANSION_READ_QUAD_OUT:
 			spi_cmd.spi_addr =
 			    (*(data_out + 3) << 16) | (*(data_out + 2) << 8) | (*(data_out + 1));;
 			spi_cmd.addr_len = addr_3byte;
@@ -303,9 +301,13 @@ static int spi_xfer_s25(struct spi_flash * flash, unsigned int len, const void *
 		case SPANSION_DUAL_IO_READ:
 			spi_cmd.spi_addr =
 			    (*(data_out + 3) << 16) | (*(data_out + 2) << 8) | (*(data_out + 1));;
+			if (flash->code == 0x1502) {
+				spi_cmd.conti_read_mode_en = 1;
+				spi_cmd.conti_read_mode_code = 0xA0;
+			} else if (flash->code == 0x1820) {
+				spi_cmd.dum_2nd_cyc = 4;
+			}
 			spi_cmd.addr_len = addr_3byte;
-			spi_cmd.conti_read_mode_en = 1;
-			spi_cmd.conti_read_mode_code = 0xA0;
 			spi_cmd.ins_len = instr_1byte;
 			spi_cmd.data_cnt = len;
 			spi_cmd.write_en = spi_read;
@@ -350,7 +352,7 @@ static int dataflash_read_fast_s25(struct spi_flash *flash, uint8_t type, uint32
 	int ret;
 	uint8_t rd_cmd[4];
 
-	if (type == S25_QUAD_READ || type == S25_QUAD_IO_READ)
+	if (type == S25_READ_QUAD_OUT || type == S25_QUAD_IO_READ)
 		ret = spansion_set_quad_enable(flash, 1);
 	else
 		ret = spansion_set_quad_enable(flash, 0);
@@ -359,17 +361,17 @@ static int dataflash_read_fast_s25(struct spi_flash *flash, uint8_t type, uint32
 		return 1;
 
 	switch (type) {
-	case S25_READ_DATA:
-		rd_cmd[0] = SPANSION_READ_DATA;
+	case S25_READ:
+		rd_cmd[0] = SPANSION_READ;
 		break;
 	case S25_FAST_READ:
 		rd_cmd[0] = SPANSION_FAST_READ;
 		break;
-	case S25_DUAL_READ:
-		rd_cmd[0] = SPANSION_DUAL_READ;
+	case S25_READ_DUAL_OUT:
+		rd_cmd[0] = SPANSION_READ_DUAL_OUT;
 		break;
-	case S25_QUAD_READ:
-		rd_cmd[0] = SPANSION_QUAD_READ;
+	case S25_READ_QUAD_OUT:
+		rd_cmd[0] = SPANSION_READ_QUAD_OUT;
 		break;
 	case S25_DUAL_IO_READ:
 		rd_cmd[0] = SPANSION_DUAL_IO_READ;
@@ -526,14 +528,18 @@ static int dataflash_erase_fast_s25(struct spi_flash *flash, uint8_t type, uint3
 	uint8_t cmd_code, status, tmp;
 	uint32_t wait_t;
 
-	if (type ==  S25_SECTOR_ERASE) {
-		cmd_code =  SPANSION_ERASE_SECTOR;
+	if (type ==  S25_PARAM_SECTOR_ERASE) {
+		if (flash->code == 0x1502) {
+			cmd_code =  SPANSION_ERASE_PARAM_8K;
+		} else if (flash->code == 0x1820) {
+			cmd_code =  SPANSION_ERASE_PARAM_4K;
+		} else {
+			prints("%s-0x%x: %s @ 0x%x\n", flash->name, flash->code, span_er_string[type], addr);
+			return 1;
+		}
+
 		erase_size = flash->erase_sector_size;
 		wait_t = 200;
-	} else if (type ==  S25_BLOCK_8K_ERASE) {
-		cmd_code =  SPANSION_ERASE_8K_BLOCK;
-		erase_size = 8 << 10;
-		wait_t = 400;
 	} else if (type == S25_BLOCK_64K_ERASE) {
 		cmd_code = SPANSION_ERASE_64K_BLOCK;
 		erase_size = 64 << 10;
@@ -550,11 +556,11 @@ static int dataflash_erase_fast_s25(struct spi_flash *flash, uint8_t type, uint3
 
 	tmp = g_check_status;
 	g_check_status = check_status_by_sw;
-	er_cmd[0] = SPANSION_READ_STATUS;
+	er_cmd[0] = SPANSION_READ_STATUS1;
 	ret = spi_flash_cmd(flash, er_cmd, NULL, 0);
 	g_check_status = tmp;
 	FTSPI020_read_status(&status);
-	if (status & SPANSION_STS_BPROTECT_BITS)
+	if (status & SPANSION_STS1_BPROTECT_BITS)
 		prints(" Block protected bits set 0x%x \n", status);
 
 	for (addr = offset; addr < (offset + len); addr += erase_size) {
@@ -581,9 +587,14 @@ static int dataflash_erase_fast_s25(struct spi_flash *flash, uint8_t type, uint3
 		if (ret)
 			break;
 
-		spansion_check_status_till_ready(flash, wait_t);
+		/* Top/Bottom 64K erase requires 2080 ms to 10400 ms */
+		if (addr < 0x20000)
+			spansion_check_status_till_ready(flash, 10400 );
+		else
+			spansion_check_status_till_ready(flash, wait_t);
 
-		prints("%s: %s @ 0x%x\n", flash->name, span_er_string[type], addr);
+		prints("%s: %s @ 0x%x size 0x%x\n", flash->name, 
+			span_er_string[type], addr, erase_size);
 
 	}
 
@@ -596,7 +607,7 @@ static int dataflash_report_status_s25(struct spi_flash *flash)
 	uint8_t rd_sts_cmd[1];
 
 	span_wait_ms = 100;
-	rd_sts_cmd[0] = SPANSION_READ_STATUS;
+	rd_sts_cmd[0] = SPANSION_READ_STATUS1;
 	ret = spi_flash_cmd(flash, rd_sts_cmd, NULL, 0);
 	FTSPI020_show_status();
 
@@ -634,7 +645,7 @@ static int spansion_check_status_till_ready(struct spi_flash * flash, uint32_t w
 
 	span_wait_ms = wait_ms;
 
-	rd_sts_cmd[0] = SPANSION_READ_STATUS;
+	rd_sts_cmd[0] = SPANSION_READ_STATUS1;
 	do {
 		if (spi_flash_cmd(flash, rd_sts_cmd, NULL, 0)) {
 			prints("%s: Failed to check status by SW\n", flash->name);
@@ -642,7 +653,7 @@ static int spansion_check_status_till_ready(struct spi_flash * flash, uint32_t w
 		}
 
 		FTSPI020_read_status(&status);
-	} while ((g_check_status == check_status_by_sw) && (status & SPANSION_STS_BUSY_BIT));
+	} while ((g_check_status == check_status_by_sw) && (status & SPANSION_STS1_BUSY_BIT));
 
 	return 0;
 }
@@ -678,7 +689,7 @@ struct spi_flash *spi_flash_probe_spansion(uint8_t * code)
 	spsf->page_size = params->page_size;
 	spsf->nr_pages = params->nr_pages ;
 	spsf->size = params->page_size * params->nr_pages;
-	spsf->erase_sector_size = params->sector_size;
+	spsf->erase_sector_size = params->param_sector_erase_size;
 
 	spsf->max_rd_type = S25_MAX_READ_TYPE;
 	spsf->max_wr_type = S25_MAX_WRITE_TYPE;

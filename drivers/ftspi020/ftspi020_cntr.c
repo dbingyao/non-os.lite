@@ -230,7 +230,7 @@ struct spi_flash *FTSPI020_probe(uint32_t ce)
 		flash = spi_flash_probe_mxic(idcode);
 		break;
 #endif
-#if defined(Spansion_S25FL032P)
+#if defined(Spansion_S25FL032P) || defined(Spansion_S25FL128S)
 	case 0x01:
 		flash = spi_flash_probe_spansion(idcode);
 		break;

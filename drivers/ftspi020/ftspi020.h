@@ -29,7 +29,7 @@ typedef enum {
 	DMA
 } Transfer_type;
 
-#define FTSPI020_FW_VERSION "ver:13.05.17"
+#define FTSPI020_FW_VERSION "ver:13.05.27"
 
 /*
  * How many CEs available on system?
@@ -45,6 +45,7 @@ typedef enum {
 #define Mxic_MX25L12845EM1
 #define Winbond_W25Q128BV
 #define Spansion_S25FL032P
+#define Spansion_S25FL128S
 
 #if defined(Winbond_W25Q32BV) || defined(Winbond_W25Q128BV)
 #include "ftspi020_winbond.h"
@@ -58,7 +59,7 @@ typedef enum {
 #include "ftspi020_sst.h"
 #endif
 
-#if defined(Spansion_S25FL032P)
+#if defined(Spansion_S25FL032P) || defined(Spansion_S25FL128S)
 #include "ftspi020_spansion.h"
 #endif
 
