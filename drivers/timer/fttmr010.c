@@ -92,32 +92,38 @@ unsigned long long get_ticks(void)
 
 static void fttmr010_t2_isr(void *data)
 {
-	int sts;
+	int sts, cr;
 
+	cr = tmr->cr;
 	tmr->cr &= ~FTTMR010_TM2_ENABLE;
 
 	/* clear interrupt status */
 	irq_edge_clear(TIMERC_IRQ2);
 
+	tmr->interrupt_state &= 0x1C7;
+
 	if (timer_handler[1].m_func)
 		timer_handler[1].m_func();
 
-	tmr->cr |= FTTMR010_TM2_ENABLE;
+	tmr->cr = cr;
 }
 
 static void fttmr010_t3_isr(void *data)
 {
-	int sts;
+	int sts, cr;
 
+	cr = tmr->cr;
 	tmr->cr &= ~FTTMR010_TM3_ENABLE;
 
 	/* clear interrupt status */
 	irq_edge_clear(TIMERC_IRQ3);
 
+	tmr->interrupt_state &= 0x3F;
+
 	if (timer_handler[2].m_func)
 		timer_handler[2].m_func();
 
-	tmr->cr |= FTTMR010_TM3_ENABLE;
+	tmr->cr = cr;
 }
 
 void disable_timer(int timer_index)
@@ -131,12 +137,13 @@ void disable_timer(int timer_index)
 
 	idx = timer_index - 1;
 
+	tmr->cr &= ~(FTTMR010_TM1_ENABLE << (idx * 3));
+
 	tmr->cfg[idx].timer_load =
 	tmr->cfg[idx].timer_counter =
 	tmr->cfg[idx].timer_match2 =
 	tmr->cfg[idx].timer_match1 = 0;
 
-	tmr->cr &= ~(FTTMR010_TM1_ENABLE << (idx * 3));
 }
 
 /**
@@ -193,6 +200,8 @@ int init_timer(int timer_index, int load_val, int use_extclk, void  timer_callba
 
 void init_global_timer(int load_val, int use_extclk)
 {
+	tmr->cr =
+	tmr->interrupt_mask = 0;
 
 	init_timer(1, load_val, use_extclk, 0);
 

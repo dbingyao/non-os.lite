@@ -24,9 +24,6 @@
 #include <div64.h>
 #include <platform.h>
 
-/* Source clock 36MHz, 1 seconds per interrupt */
-#define TIMERTEST_LOAD_VAL	37748736
-
 static unsigned long long tick;
 
 extern void heapsort(void);
@@ -189,11 +186,9 @@ int do_spi_bootmode_test(int argc, char * const argv[])
 
 	/* Enable timer and count down */
 	tick = 0;
-#if defined PLATFORM_A320
-	init_timer(2, TIMERTEST_LOAD_VAL, 1, timer2_tick_plus);
-#else
-	init_timer(2, TIMERTEST_LOAD_VAL, 0, timer2_tick_plus);
-#endif
+
+	init_timer(2, TIMER_CLOCK, TIMER_USE_EXTCLK, timer2_tick_plus);
+
 	i = 0;
 	do {
 		/* 200 ms */

@@ -145,6 +145,7 @@
 #define TIMERC_IRQ3   		3
 #define TIMER_CLOCK     	37748736
 #define CONFIG_SYS_HZ   	1000    /* timer ticks per second */
+#define TIMER_USE_EXTCLK        0
 
 /**
  * FTDMAC020 DMA controller
