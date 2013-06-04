@@ -1,20 +1,13 @@
-/**
- * (C) Copyright 2013 Faraday Technology
- * BingYao Luo <bjluo@faraday-tech.com>
+/*
+ *  linux/lib/vsprintf.c
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *  Copyright (C) 1991, 1992  Linus Torvalds
+ *  BingYao - May 2013 Modified
+ */
+
+/* vsprintf.c -- Lars Wirzenius & Linus Torvalds. */
+/*
+ * Wirzenius wrote this portably, Torvalds fucked it up :-)
  */
 #include <stdarg.h>
 #include <stdio.h>
@@ -30,28 +23,19 @@
 #define noinline __attribute__((noinline))
 
 /* some reluctance to put this into a new limits.h, so it is here */
+#ifndef INT_MAX
 #define INT_MAX		((int)(~0U>>1))
-
-const char hex_asc[] = "0123456789abcdef";
-#define hex_asc_lo(x)   hex_asc[((x) & 0x0f)]
-#define hex_asc_hi(x)   hex_asc[((x) & 0xf0) >> 4]
-
-static inline char *pack_hex_byte(char *buf, uint8_t byte)
-{
-	*buf++ = hex_asc_hi(byte);
-	*buf++ = hex_asc_lo(byte);
-	return buf;
-}
+#endif
 
 /* we use this so that we can do without the ctype library */
 #define is_digit(c)	((c) >= '0' && (c) <= '9')
 
 static int skip_atoi(const char **s)
 {
-	int i=0;
+	int i = 0;
 
 	while (is_digit(**s))
-		i = i*10 + *((*s)++) - '0';
+		i = i * 10 + *((*s)++) - '0';
 	return i;
 }
 
@@ -65,33 +49,33 @@ static int skip_atoi(const char **s)
 /* Formats correctly any integer in [0,99999].
  * Outputs from one to five digits depending on input.
  * On i386 gcc 4.1.2 -O2: ~250 bytes of code. */
-static char* put_dec_trunc(char *buf, unsigned q)
+static char *put_dec_trunc(char *buf, unsigned q)
 {
 	unsigned d3, d2, d1, d0;
-	d1 = (q>>4) & 0xf;
-	d2 = (q>>8) & 0xf;
-	d3 = (q>>12);
+	d1 = (q >> 4) & 0xf;
+	d2 = (q >> 8) & 0xf;
+	d3 = (q >> 12);
 
-	d0 = 6*(d3 + d2 + d1) + (q & 0xf);
+	d0 = 6 * (d3 + d2 + d1) + (q & 0xf);
 	q = (d0 * 0xcd) >> 11;
-	d0 = d0 - 10*q;
+	d0 = d0 - 10 * q;
 	*buf++ = d0 + '0'; /* least significant digit */
-	d1 = q + 9*d3 + 5*d2 + d1;
+	d1 = q + 9 * d3 + 5 * d2 + d1;
 	if (d1 != 0) {
 		q = (d1 * 0xcd) >> 11;
-		d1 = d1 - 10*q;
+		d1 = d1 - 10 * q;
 		*buf++ = d1 + '0'; /* next digit */
 
-		d2 = q + 2*d2;
+		d2 = q + 2 * d2;
 		if ((d2 != 0) || (d3 != 0)) {
 			q = (d2 * 0xd) >> 7;
-			d2 = d2 - 10*q;
+			d2 = d2 - 10 * q;
 			*buf++ = d2 + '0'; /* next digit */
 
-			d3 = q + 4*d3;
+			d3 = q + 4 * d3;
 			if (d3 != 0) {
 				q = (d3 * 0xcd) >> 11;
-				d3 = d3 - 10*q;
+				d3 = d3 - 10 * q;
 				*buf++ = d3 + '0';  /* next digit */
 				if (q != 0)
 					*buf++ = q + '0';  /* most sign. digit */
@@ -101,14 +85,14 @@ static char* put_dec_trunc(char *buf, unsigned q)
 	return buf;
 }
 /* Same with if's removed. Always emits five digits */
-static char* put_dec_full(char *buf, unsigned q)
+static char *put_dec_full(char *buf, unsigned q)
 {
 	/* BTW, if q is in [0,9999], 8-bit ints will be enough, */
 	/* but anyway, gcc produces better code with full-sized ints */
 	unsigned d3, d2, d1, d0;
-	d1 = (q>>4) & 0xf;
-	d2 = (q>>8) & 0xf;
-	d3 = (q>>12);
+	d1 = (q >> 4) & 0xf;
+	d2 = (q >> 8) & 0xf;
+	d3 = (q >> 12);
 
 	/*
 	 * Possible ways to approx. divide by 10
@@ -120,30 +104,30 @@ static char* put_dec_full(char *buf, unsigned q)
 	 * (x * 0x0d) >> 7:      1101 - same, shortest code (on i386)
 	 */
 
-	d0 = 6*(d3 + d2 + d1) + (q & 0xf);
+	d0 = 6 * (d3 + d2 + d1) + (q & 0xf);
 	q = (d0 * 0xcd) >> 11;
-	d0 = d0 - 10*q;
+	d0 = d0 - 10 * q;
 	*buf++ = d0 + '0';
-	d1 = q + 9*d3 + 5*d2 + d1;
-		q = (d1 * 0xcd) >> 11;
-		d1 = d1 - 10*q;
-		*buf++ = d1 + '0';
+	d1 = q + 9 * d3 + 5 * d2 + d1;
+	q = (d1 * 0xcd) >> 11;
+	d1 = d1 - 10 * q;
+	*buf++ = d1 + '0';
 
-		d2 = q + 2*d2;
-			q = (d2 * 0xd) >> 7;
-			d2 = d2 - 10*q;
-			*buf++ = d2 + '0';
+	d2 = q + 2 * d2;
+	q = (d2 * 0xd) >> 7;
+	d2 = d2 - 10 * q;
+	*buf++ = d2 + '0';
 
-			d3 = q + 4*d3;
-				q = (d3 * 0xcd) >> 11; /* - shorter code */
-				/* q = (d3 * 0x67) >> 10; - would also work */
-				d3 = d3 - 10*q;
-				*buf++ = d3 + '0';
-					*buf++ = q + '0';
+	d3 = q + 4 * d3;
+	q = (d3 * 0xcd) >> 11; /* - shorter code */
+	/* q = (d3 * 0x67) >> 10; - would also work */
+	d3 = d3 - 10 * q;
+	*buf++ = d3 + '0';
+	*buf++ = q + '0';
 	return buf;
 }
 /* No inlining helps gcc to use registers better */
-static noinline char* put_dec(char *buf, unsigned NUM_TYPE num)
+static noinline char *put_dec(char *buf, unsigned NUM_TYPE num)
 {
 	while (1) {
 		unsigned rem;
@@ -166,10 +150,17 @@ static noinline char* put_dec(char *buf, unsigned NUM_TYPE num)
  * Macro to add a new character to our output string, but only if it will
  * fit. The macro moves to the next character position in the output string.
  */
-#define ADDCH(str, ch) do { \
-	if ((str) < end) \
-		*(str) = (ch); \
-	++str; \
+#define ADDCH(str, c) do { \
+		int ch = c; \
+		if ((str) == NULL) { \
+			if ((ch) == '\n') \
+				putchar('\r'); \
+			putchar(ch); \
+		} else { \
+			if ((str) < end) \
+				*(str) = (ch); \
+			++str; \
+		} \
 	} while (0)
 
 static char *number(char *buf, char *end, unsigned NUM_TYPE num,
@@ -336,7 +327,7 @@ static char *pointer(const char *fmt, char *buf, char *end, void *ptr,
 #endif
 	flags |= SMALL;
 	if (field_width == -1) {
-		field_width = 2*sizeof(void *);
+		field_width = 2 * sizeof(void *);
 		flags |= ZEROPAD;
 	}
 	return number(buf, end, (unsigned long)ptr, 16, field_width,
@@ -360,7 +351,6 @@ static int vsnprintf_internal(char *buf, size_t size, const char *fmt,
 				/* 'z' changed to 'Z' --davidm 1/25/99 */
 				/* 't' added for ptrdiff_t */
 	char *end = buf + size;
-	unsigned short arg_idx;
 
 	/* Make sure end is always >= buf - do we want this in U-Boot? */
 	if (end < buf) {
@@ -372,7 +362,6 @@ static int vsnprintf_internal(char *buf, size_t size, const char *fmt,
 	   will put it r2, r4, r6 , and so on. (r4 and later are in stack)
 	 */
 	str = buf;
-	arg_idx = 1;
 
 	for (; *fmt ; ++fmt) {
 		if (*fmt != '%') {
@@ -400,7 +389,6 @@ static int vsnprintf_internal(char *buf, size_t size, const char *fmt,
 			++fmt;
 			/* it's the next argument */
 			field_width = va_arg(args, int);
-			arg_idx++;
 			if (field_width < 0) {
 				field_width = -field_width;
 				flags |= LEFT;
@@ -417,7 +405,6 @@ static int vsnprintf_internal(char *buf, size_t size, const char *fmt,
 				++fmt;
 				/* it's the next argument */
 				precision = va_arg(args, int);
-				arg_idx++;
 			}
 			if (precision < 0)
 				precision = 0;
@@ -445,7 +432,6 @@ static int vsnprintf_internal(char *buf, size_t size, const char *fmt,
 					ADDCH(str, ' ');
 			}
 			ADDCH(str, (unsigned char) va_arg(args, int));
-			arg_idx++;
 			while (--field_width > 0)
 				ADDCH(str, ' ');
 			continue;
@@ -453,14 +439,27 @@ static int vsnprintf_internal(char *buf, size_t size, const char *fmt,
 		case 's':
 			str = string(str, end, va_arg(args, char *),
 				     field_width, precision, flags);
-			arg_idx++;
 			continue;
 
+		case 'f':
+		case 'g':
+			do {
+				int i;
+				char tmp[128];
+
+				__dtostr(va_arg(args, double),
+					tmp, sizeof(tmp) - 1,
+					field_width, (precision > 0) ? precision : 1,
+					(*fmt == 'g'));
+
+				for (i = 0; i < strlen(tmp); ++i)
+					ADDCH(str, tmp[i]);
+			} while (0);
+			continue;
 		case 'p':
 			str = pointer(fmt+1, str, end,
 					va_arg(args, void *),
 					field_width, precision, flags);
-			arg_idx++;
 			/* Skip all alphanumeric pointer suffixes */
 			while (isalnum(fmt[1]))
 				fmt++;
@@ -474,7 +473,6 @@ static int vsnprintf_internal(char *buf, size_t size, const char *fmt,
 				int * ip = va_arg(args, int *);
 				*ip = (str - buf);
 			}
-			arg_idx++;
 			continue;
 
 		case '%':
@@ -507,33 +505,21 @@ static int vsnprintf_internal(char *buf, size_t size, const char *fmt,
 			continue;
 		}
 		if (qualifier == 'L') {  /* "quad" for 64 bit variables */
-			if (arg_idx & 0x1) { /* Not multiple of 2 */
-				args = (char *)(args) + 4;
-				arg_idx++;
-			}
 			num = va_arg(args, unsigned long long);
-
-			/* unsigned long long consumes 2 argumnent */
-			arg_idx += 2;
 		} else if (qualifier == 'l') {
 			num = va_arg(args, unsigned long);
-			arg_idx++;
 			if (flags & SIGN)
 				num = (signed long) num;
 		} else if (qualifier == 'Z' || qualifier == 'z') {
 			num = va_arg(args, size_t);
-			arg_idx++;
 		} else if (qualifier == 't') {
 			num = va_arg(args, ptrdiff_t);
-			arg_idx++;
 		} else if (qualifier == 'h') {
 			num = (unsigned short) va_arg(args, int);
-			arg_idx++;
 			if (flags & SIGN)
 				num = (signed short) num;
 		} else {
 			num = va_arg(args, unsigned int);
-			arg_idx++;
 			if (flags & SIGN)
 				num = (signed int) num;
 		}
@@ -551,26 +537,6 @@ static int vsnprintf_internal(char *buf, size_t size, const char *fmt,
 	/* the trailing null byte doesn't count towards the total */
 	return str-buf;
 }
-
-int vsnprintf(char *buf, size_t size, const char *fmt,
-			      va_list args)
-{
-	return vsnprintf_internal(buf, size, fmt, args);
-}
-
-int vscnprintf(char *buf, size_t size, const char *fmt, va_list args)
-{
-	int i;
-
-	i = vsnprintf(buf, size, fmt, args);
-
-	if (i < size)
-		return i;
-	if (size != 0)
-		return size - 1;
-	return 0;
-}
-
 /**
  * Format a string and place it in a buffer (va_list version)
  *
@@ -584,46 +550,39 @@ int vscnprintf(char *buf, size_t size, const char *fmt, va_list args)
  *
  * If you're not already dealing with a va_list consider using sprintf().
  */
-int vsprintf(char *buf, const char *fmt, int *args)
-{
-	return vsnprintf_internal(buf, INT_MAX, fmt, args);
-}
-int simple_printf(const char *format, ...)
-{
-	va_list args;
-        uint i;
-        char printbuffer[512];
-
-        /* For this to work, printbuffer must be larger than
-         * anything we ever want to print.
-         */
-        va_start(args, format);
-        i = vscnprintf(printbuffer, sizeof(printbuffer), format, args);
-        va_end(args);
-
-        /* Print the string */
-        puts(printbuffer);
-}
-
 int simple_sprintf(char *str, const char *format, ...)
 {
+	int ret;
 	va_list args;
-	int i;
 
-        va_start(args, format);
-	i=vsprintf(str,format,args);
-        va_end(args);
-	return i;
+	va_start(args, format);
+	ret = vsnprintf_internal(str, INT_MAX, format, args);
+	va_end(args);
+
+	return ret;
 }
 
 int simple_snprintf(char *str, size_t size, const char *format, ...)
 {	
+	int ret;
 	va_list	args;
-	int i;
 
-        va_start(args, format);
-	i=vsnprintf(str,size,format,args);
-        va_end(args);
+	va_start(args, format);
+	ret = vsnprintf_internal(str, size, format, args);
+	va_end(args);
 
-	return i;
+	return ret;
 }
+
+int simple_printf(const char *format, ...)
+{
+	int ret;
+	va_list args;
+
+	va_start(args, format);
+	ret = vsnprintf_internal(NULL, INT_MAX, format, args);
+	va_end(args);
+
+	return ret;
+}
+

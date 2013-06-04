@@ -35,7 +35,7 @@ export OBJCOPY	= $(TRGT)objcopy
 export OD	= $(TRGT)objdump
 
 CFLAGS := -g -mfloat-abi=soft
-CPPFLAGS := -I$(TOP_DIR)/include -I$(TOP_DIR)/include/linux -I$(TOP_DIR)/include/asm
+CPPFLAGS := -I$(TOP_DIR)/include -I$(TOP_DIR)/include/linux -I$(TOP_DIR)/include/asm -isystem $(shell $(CC) -print-file-name=include)
 LDFLAGS := -LBIN -g -v
 ASFLAGS := -g -mfloat-abi=soft
 
