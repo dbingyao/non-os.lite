@@ -33,7 +33,7 @@ void hardware_init()
 
 	board_init();
 
-	PRINT_IMG_VERS;
+	prints("\n%s\n", PRINT_IMG_VERS);
 	prints("-------------------------------------------------\n");
 
 	mem_malloc_init();
