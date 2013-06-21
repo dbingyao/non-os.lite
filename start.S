@@ -23,7 +23,7 @@
 	.globl _stext
 	.align 5
 	.text
-_stext: 
+_stext:
 	b       reset
 	b	undefined_instruction
 	b	software_interrupt
@@ -48,6 +48,8 @@ reset:
 mmu_done:
 #if defined ROM_NOR || defined ROM_SPI
 	bl	init_ddr
+
+	bl	fLib_CheckMem
 
 	led	0x1
 
@@ -104,7 +106,7 @@ copy_text:
 
 	/* setup stack pointer for SVC first */
 	ldr	r0, _stack
-	mov     sp, r0 
+	mov     sp, r0
 	/* and for the rest */
 	bl	setup_stacks
 
@@ -315,4 +317,3 @@ fiq:
 	save_user_regs
 	bl	do_fiq
 	restore_user_regs
-

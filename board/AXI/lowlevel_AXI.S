@@ -63,6 +63,72 @@ ddr3_config_table:
 	.long	DDRC_REG_BASE + 0x04, 0x00000001
 	.long	0
 
+	.globl	fLib_CheckMem
+fLib_CheckMem:
+        MOV        r9, lr
+
+        //copy 1KB data from ROM
+        LDR  r1, =0x10000000
+        LDR  r3, =0x0
+        ADD r2, r1, #0x400
+1:
+        LDR  r0, [r3], #4
+        STR  r0, [r1], #4
+        CMP r1, r2
+        BLO 1b
+
+        LDR  r5, =0x11111111
+        MOV        r6, #0
+        MOV        r7, #2
+
+        // msdly: It's fixed to 0x11111111
+        LDR  r4, =0xA0300074
+        STR  r5, [r4]
+
+set_gds:
+        // GDS: from 0 to 3
+        LDR  r4, =0xA0300000
+        LDR  r3, [r4]
+        BIC   r3, r3, #3
+        ORR r3, r6, r3
+        STR  r3, [r4]
+
+set_rdlat:
+        // phy_rdlat: from 2 to 11
+        LDR  r4, =0xA030003C
+        LDR  r3, [r4]
+        BIC  r3, r3, #0xf00000
+		MOV  r8, r7, lsl #20
+        ORR  r3, r8, r3
+        STR  r3, [r4]
+check:
+        LDR  r1, =0x10000000
+        LDR  r4, =0x0
+2:
+        LDR  r3, [r1], #4
+        LDR  r0, [r4], #4
+        CMP r0, r3
+        BNE next_rdlat
+        CMP r1, r2
+        BLO 2b
+
+        // success & return
+        MOV        pc, r9
+
+next_rdlat:
+        ADD r7, r7, #1
+        CMP r7, #12
+        BLO set_rdlat
+        MOV        r7, #2
+next_gds:
+        ADD r6, r6, #1
+        CMP r6, #4
+        BLO set_gds
+        MOV        r6, #0
+err:
+        B      err
+
+
 	.globl remap
 remap:
 	led 	0x3
