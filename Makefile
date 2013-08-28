@@ -35,7 +35,7 @@ LDSFILE := ram.lds
 endif
 endif
 
-ELFNAME := bin/$(IMAGE)-nonos-$(COPYSECT)-$(PLATFORM)
+ELFNAME := bin/$(IMAGE)-nonos-$(COPYSECT)-$(PLATFORM)-$(shell date +'%C%y%m%d')
 
 
 dirs-y := lib board drivers app
