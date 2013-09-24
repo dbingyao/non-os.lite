@@ -18,25 +18,27 @@
  ##
 
 # AHB, AXI or A320
-PLATFORM=A320
+PLATFORM=AXI
 
 # ROM_NOR,ROM_SPI or RAM
-IMAGE=RAM
+IMAGE=ROM_NOR
 
 #text or data
 COPYSECT=text
 
-TRGT		= arm-none-eabi-
-export CC	= $(TRGT)gcc 
-export AS	= $(TRGT)as
-export LD	= $(TRGT)ld
-export AR	= $(TRGT)ar 
-export OBJCOPY	= $(TRGT)objcopy
-export OD	= $(TRGT)objdump
+CROSS_COMPILE		= arm-none-eabi-
+export CC	= $(CROSS_COMPILE)gcc 
+export AS	= $(CROSS_COMPILE)as
+export LD	= $(CROSS_COMPILE)ld
+export AR	= $(CROSS_COMPILE)ar 
+export OBJCOPY	= $(CROSS_COMPILE)objcopy
+export OD	= $(CROSS_COMPILE)objdump
 
 CFLAGS := -g -mfloat-abi=soft
-CPPFLAGS := -I$(TOP_DIR)/include -I$(TOP_DIR)/include/linux -I$(TOP_DIR)/include/asm -isystem $(shell $(CC) -print-file-name=include)
-LDFLAGS := -LBIN -g -v
+CPPFLAGS := -I$(TOP_DIR)/include -I$(TOP_DIR)/include/linux -I$(TOP_DIR)/include/libc \
+	    -I$(TOP_DIR)/include/asm -isystem $(shell $(CC) -print-file-name=include)
+
+LDFLAGS := -LBIN -g -v -nostartfiles -nostdlib
 ASFLAGS := -g -mfloat-abi=soft
 
 CFLAGS += -DPLATFORM_$(PLATFORM)
@@ -66,8 +68,9 @@ CONFIG_FTTMR010=y
 CONFIG_FTUART=y
 CONFIG_FTINTC010=y
 CONFIG_FTSPI020=y
+CONFIG_FTSATA100=y
 CONFIG_FTSMC020=n
 CONFIG_CFI=n
-CONFIG_FTDMAC020=y
-CONFIG_FTDMAC030=n
+CONFIG_FTDMAC020=n
+CONFIG_FTDMAC030=y
 

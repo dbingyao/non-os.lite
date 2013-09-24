@@ -242,7 +242,8 @@
 #endif /*Void_t*/
 
 #if __STD_C
-#include <linux/stddef.h>	/* for size_t */
+#include <stddef.h>	/* for size_t */
+#include <types.h>
 #else
 #include <sys/types.h>
 #endif	/* __STD_C */

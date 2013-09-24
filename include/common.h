@@ -96,6 +96,8 @@ extern unsigned long get_timer(unsigned long base);
 #define BIT30							(1 << 30)
 #define BIT31							(1 << 31)
 
+#define	TRUE	1
+#define FALSE	0
 //#define container_of(ptr, type, member) ({const typeof( ((type *)0)->member ) *__mptr = (ptr); (type *)( (char *)__mptr - offsetof(type,member));})
 //#define container_of(ptr, type, member) (const struct spi_flash(((struct winbond_spi_flash *)0)->member) *__mptr = (ptr);)
 //#define container_of(ptr, type, member) (offsetof(type,member))
@@ -120,7 +122,6 @@ extern int cmd_exec(char *line, cmd_t * tbl);
 
 #define	CMDLEN  	50
 
-extern int str_to_hex(char * str, void *num, int digits);
 extern int ctrlc(void);
 
 extern void shell(void);

@@ -37,9 +37,8 @@ endif
 
 ELFNAME := bin/$(IMAGE)-nonos-$(COPYSECT)-$(PLATFORM)-$(shell date +'%C%y%m%d')
 
-
 dirs-y := lib board drivers app
-objs-y := app/app.a lib/libUtils.a drivers/drivers.a board/board.a
+objs-y := app/app.a drivers/drivers.a board/board.a lib/libUtils.a
 
 .PHONY: all
 all: print version config $(dirs-y) $(ELFNAME).elf
@@ -73,15 +72,12 @@ $(dirs-y):
 $(ELFNAME).elf: start.o $(objs-y)
 	$(LD) -Bstatic \
 		-T $(LDSFILE) \
-		$(LDFLAGS) \
-		-nostartfiles \
-		-nostdlib \
 		start.o \
 		--start-group \
-		$(objs-y) -lgcc -lc -lm \
+		$(objs-y) -lgcc \
 		--end-group \
+		$(LDFLAGS) \
 		-L $(shell dirname `$(CC) $(CFLAGS) -print-libgcc-file-name`) \
-		-L $(shell dirname `$(CC) $(CFLAGS) -print-file-name=libc.a`) \
 		-Map $(ELFNAME).map -o $(ELFNAME).elf
 	$(OBJCOPY) -O binary  $(ELFNAME).elf $(ELFNAME).bin
 	$(OD) -D  $(ELFNAME).elf > $(ELFNAME).dump

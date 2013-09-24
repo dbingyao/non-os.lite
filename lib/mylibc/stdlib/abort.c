@@ -16,32 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#include <linux/types.h>
-#include <platform.h>
-#include <common.h>
-#include <flash.h>
-#include <version.h>
-#include <malloc.h>
 
-extern int uart_init(int reg_base, int baud_rate);
-extern int board_init(void);
-
-extern flash_info_t flash_info[];       /* info for FLASH chips */
-
-void hardware_init()
-{
-	uart_init(UART0_REG_BASE, UART_BAUD_38400);
-
-	board_init();
-
-	prints("\n%s\n", PRINT_IMG_VERS);
-	prints("-------------------------------------------------\n");
-
-	mem_malloc_init();
-
-}
-
-void main()
-{
-	shell();
+void abort(void) 
+{ 
+	while(1)  {;}
 }

@@ -19,10 +19,16 @@
 
 include $(TOP_DIR)/config.mk
 
-subdirs-y := . stdlib stdio string
-utils-objs := $(foreach dir,$(subdirs-y),$(patsubst %.c,%.o,$(wildcard $(dir)/*.c)))
+lib-objs := $(patsubst %.c,%.o,$(wildcard *.c))
 
-depfiles := $(utils-objs:.o=.c)
+libm-objs := $(patsubst %.c,%.o,$(wildcard mylibm/*.c))
+
+subdirs-libc := $(addprefix mylibc/, stdio stdlib string)
+subdirs-libc += mylibc
+libc-objs := $(foreach dir,$(subdirs-libc),$(patsubst %.c,%.o,$(wildcard $(dir)/*.c)))
+
+depfiles := $(libm-objs:.o=.c)
+depfiles += $(libc-objs:.o=.c)
 
 Makefile.depend: $(depfiles)
 	@find . -name '*.depend' | xargs rm -f
@@ -34,8 +40,25 @@ Makefile.depend: $(depfiles)
 -include Makefile.depend
 
 .PHONY: all
-all: libUtils.a
+all: pr_objs libgen.a libm.a libc.a
 
-libUtils.a: $(utils-objs)
+pr_objs:
+	@echo "libm objs: $(libm-objs)"
+	@echo "libc objs: $(libc-objs)"
+
+libgen.a: $(lib-objs)
 	$(AR) -rs $@ $^
+	$(OD) -a $@ > libgen.archive
+	$(AR) -rs libUtils.a $^
+
+libm.a: $(libm-objs)
+	$(AR) -rs $@ $^
+	$(OD) -a $@ > libm.archive
+	$(AR) -rs libUtils.a $^
+
+libc.a: $(libc-objs)
+	$(AR) -rs $@ $^
+	$(OD) -a $@ > libc.archive
+	$(AR) -rs libUtils.a $^
 	$(OD) -a $@ > libUtils.archive
+

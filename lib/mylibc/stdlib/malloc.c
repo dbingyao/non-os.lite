@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #ifndef CONFIG_LIB_MALLOC_SIZE
 #define CONFIG_LIB_MALLOC_SIZE		(16 << 10)
@@ -2089,9 +2090,6 @@ static void malloc_extend_top(nb) INTERNAL_SIZE_T nb;
   /* We always land on a page boundary */
   assert(((unsigned long)((char*)top + top_size) & (pagesz - 1)) == 0);
 }
-
-
-
 
 /* Main public routines */
 

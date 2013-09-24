@@ -39,6 +39,9 @@ typedef unsigned int u32;
 typedef signed long long s64;
 typedef unsigned long long u64;
 
+typedef unsigned long   size_t;
+typedef long            ssize_t;
+
 #define BITS_PER_LONG 32
 
 /* Dma addresses are 32-bits wide.  */

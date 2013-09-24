@@ -69,7 +69,7 @@ void qsort(void *base, size_t nmemb, size_t size,
            int(*compar)(const void *, const void *));
 
 /* Abort execution and generate a core-dump.  */
-#define abort()			do { } while(0)
+void abort(void);
 
 /* Return the absolute value of X.  */
 #define abs(x)			((x) > 0 ? (x) : -(x))
