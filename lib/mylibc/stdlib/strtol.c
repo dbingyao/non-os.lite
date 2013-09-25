@@ -38,7 +38,7 @@ long int strtol (const char *nptr, char **endptr, int base)
 	if (nptr == NULL)
 		return 0;
 
-	if (base != 0 || base != 10 || base != 16)
+	if (base != 0 && base != 10 && base != 16)
 		return 0;
 
 	a = nptr;
