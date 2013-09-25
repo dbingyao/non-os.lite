@@ -27,7 +27,8 @@ subdirs-libc := $(addprefix mylibc/, stdio stdlib string)
 subdirs-libc += mylibc
 libc-objs := $(foreach dir,$(subdirs-libc),$(patsubst %.c,%.o,$(wildcard $(dir)/*.c)))
 
-depfiles := $(libm-objs:.o=.c)
+depfiles := $(lib-objs:.o=.c)
+depfiles += $(libm-objs:.o=.c)
 depfiles += $(libc-objs:.o=.c)
 
 Makefile.depend: $(depfiles)
@@ -43,8 +44,8 @@ Makefile.depend: $(depfiles)
 all: pr_objs libgen.a libm.a libc.a
 
 pr_objs:
-	@echo "libm objs: $(libm-objs)"
-	@echo "libc objs: $(libc-objs)"
+#	@echo "libm objs: $(libm-objs)"
+#	@echo "libc objs: $(libc-objs)"
 
 libgen.a: $(lib-objs)
 	$(AR) -rs $@ $^
