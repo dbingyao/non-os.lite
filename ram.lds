@@ -9,12 +9,11 @@ MEMORY
 }
  
 /* define stack size and heap size here */
-stack_size = 4096;
 heap_size = 0x2000000; /*32M*/ 
  
 /* define beginning and ending of stack */
 __stack_start = ORIGIN(RAM)+LENGTH(RAM);
-__stack_end = __stack_start - stack_size;
+/* __stack_end is heap_start + heap_size */
  
 /* Define output sections */
 SECTIONS
@@ -85,16 +84,14 @@ SECTIONS
     } > RAM
  
     . = ALIGN(4);
-    . = __stack_end;
     .stack :
     {
-        . = . + stack_size;
+	__stack_end = .;
     } > RAM
  
     /* Remove information from the standard libraries */
     /DISCARD/ :
     {
-        lib/libUtils.a ( * )
         libgcc.a ( * )
     }
  
