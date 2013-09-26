@@ -18,12 +18,13 @@
  */
 #include <platform.h>
 
-	.globl led_addr
-led_addr:
+	.globl init_board
+init_board:
 	/* prepare SMC to show debug LED */
 	ldr	r1, =SMC_REG_BASE + 0x18
 	ldr	r2, =CONFIG_SHOW_LED_ADDR
 	str	r2, [r1]
+
 	mov	pc, lr
 
 #if defined ROM_NOR || defined ROM_SPI

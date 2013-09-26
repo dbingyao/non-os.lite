@@ -36,8 +36,6 @@ _stext:
 reset:
 	msr	cpsr_c, #PSR_F_BIT | PSR_I_BIT | SVC_MODE
 
-	bl	led_addr
-
 	/* Disable MMU if it was enabled */
 	mrc	p15, 0, r0, c1, c0, 0
 	tst	r0, #P15_C1_MMU
@@ -47,9 +45,11 @@ reset:
 
 mmu_done:
 #if defined ROM_NOR || defined ROM_SPI
+	bl	init_board
+
 	bl	init_ddr
 
-	bl	fLib_CheckMem
+	/*bl	CalibDdr //fLib_CheckMem */
 
 	led	0x1
 

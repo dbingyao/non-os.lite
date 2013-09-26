@@ -19,10 +19,6 @@
  */
 #include <platform.h>
 
-	.globl led_addr
-led_addr:
-	mov	pc, lr
-
 #if defined ROM_NOR || defined ROM_SPI
 .macro  wait_sdram
 	ldr	r0, =DDRC_REG_BASE
@@ -32,7 +28,8 @@ led_addr:
 	bne     1b                                                                                                                                           
 .endm
 
-.macro init_cpu
+	.globl init_board
+init_board:
 	/*
 	 * flush v4 I/D caches
 	 */
@@ -49,12 +46,11 @@ led_addr:
 	orr     r0, r0, #0x00000002     @ set bit 2 (A) Align
 	orr     r0, r0, #0x00001000     @ set bit 12 (I) I-Cache
 	mcr     p15, 0, r0, c1, c0, 0
-.endm
+
+	mov	pc, lr
 
 	.globl	init_ddr
 init_ddr:
-	init_cpu
-
 	led     0x10
 
 	ldr	r0, =DDRC_REG_BASE 
