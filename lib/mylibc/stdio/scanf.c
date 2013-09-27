@@ -2,6 +2,10 @@
  *  linux/lib/vsprintf.c
  *
  *  Copyright (C) 1991, 1992  Linus Torvalds
+ *
+ *  BingYao,Luo 2013-09-27
+ *  - Use _gets in the scanf to print char input by
+ *    user. Also support delete and backspace key.
  */
 
 /* vsprintf.c -- Lars Wirzenius & Linus Torvalds. */
@@ -283,6 +287,31 @@ int sscanf(const char *buf, const char *fmt, ...)
 	return i;
 }
 
+#define BACKSP_KEY 0x08
+#define DELETE_KEY 0x7F
+char *_gets(char *s)
+{
+	int c, i = 0;
+
+	do {
+		c = getchar();
+		if (c == DELETE_KEY || c == BACKSP_KEY) {
+			if(i) {
+				s[i] = '\0';
+				i--;
+				puts("\b \b");
+			}
+		} else if (c != -1 && c != '\r' && c != '\n') {
+			s[i++] = (char)c;
+			putchar(c);
+		}
+	} while(c && c != -1 && c != '\r' && c != '\n');
+
+	s[i] = 0;
+
+	return s;
+}
+
 /**
  * scanf - Unformat STDIN into a list of arguments
  * @fmt:	formatting of buffer
@@ -295,7 +324,8 @@ int scanf(const char *fmt, ...)
 	int i = 0;
 
 	do {
-		gets(line);
+		_gets(line);
+
 		if (strlen(line) <= 0)
 			continue;
 		va_start(args, fmt);
