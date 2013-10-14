@@ -1,49 +1,82 @@
 /*
- *  linux/lib/string.c
- *
- *  Copyright (C) 1991, 1992  Linus Torvalds
+ * newlib-2.0.0
  */
 
-/*
- * stupid library routines.. The optimized versions should generally be found
- * as inline code in <asm-xx/string.h>
- *
- * These are buggy as well..
- *
- * * Fri Jun 25 1999, Ingo Oeser <ioe@informatik.tu-chemnitz.de>
- * -  Added strsep() which will replace strtok() soon (because strsep() is
- *    reentrant and should be faster). Use only strsep() in new code, please.
- *
- * * Sat Feb 09 2002, Jason Thomas <jason@topic.com.au>,
- *                    Matthew Hawkins <matt@mh.dropbear.id.au>
- * -  Kissed strtok() goodbye
- */
-
-#include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
-/**
- * strncpy - Copy a length-limited, %NUL-terminated string
- * @dest: Where to copy the string to
- * @src: Where to copy the string from
- * @count: The maximum number of bytes to copy
- *
- * The result is not %NUL-terminated if the source exceeds
- * @count bytes.
- *
- * In the case where the length of @src is less than  that  of
- * count, the remainder of @dest will be padded with %NUL.
- *
- */
-char *strncpy(char *dest, const char *src, size_t count)
+/*SUPPRESS 560*/
+/*SUPPRESS 530*/
+
+/* Nonzero if either X or Y is not aligned on a "long" boundary.  */
+#define UNALIGNED(X, Y) \
+  (((long)X & (sizeof (long) - 1)) | ((long)Y & (sizeof (long) - 1)))
+
+#if LONG_MAX == 2147483647L
+#define DETECTNULL(X) (((X) - 0x01010101) & ~(X) & 0x80808080)
+#else
+#if LONG_MAX == 9223372036854775807L
+/* Nonzero if X (a long int) contains a NULL byte. */
+#define DETECTNULL(X) (((X) - 0x0101010101010101) & ~(X) & 0x8080808080808080)
+#else
+#error long int is not a 32bit or 64bit type.
+#endif
+#endif
+
+#ifndef DETECTNULL
+#error long int is not a 32bit or 64bit byte
+#endif
+
+#define TOO_SMALL(LEN) ((LEN) < sizeof (long))
+
+char *strncpy(char *dst0, const char *src0, size_t count)
 {
-	char *tmp = dest;
+#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+	char *dscan;
+	const char *sscan;
 
-	while (count) {
-		if ((*tmp = *src) != 0)
-			src++;
-		tmp++;
-		count--;
+	dscan = dst0;
+	sscan = src0;
+	while (count > 0) {
+		--count;
+		if ((*dscan++ = *sscan++) == '\0')
+			break;
 	}
-	return dest;
+	while (count-- > 0)
+		*dscan++ = '\0';
+
+	return dst0;
+#else
+	char *dst = dst0;
+	const char *src = src0;
+	long *aligned_dst;
+	const long *aligned_src;
+
+	/* If SRC and DEST is aligned and count large enough, then copy words.  */
+	if (!UNALIGNED(src, dst) && !TOO_SMALL(count)) {
+		aligned_dst = (long *)dst;
+		aligned_src = (long *)src;
+
+		/* SRC and DEST are both "long int" aligned, try to do "long int"
+		sized copies.  */
+		while (count >= sizeof(long int) && !DETECTNULL(*aligned_src)) {
+			count -= sizeof(long int);
+			*aligned_dst++ = *aligned_src++;
+		}
+
+		dst = (char *)aligned_dst;
+		src = (char *)aligned_src;
+	}
+
+	while (count > 0) {
+		--count;
+		if ((*dst++ = *src++) == '\0')
+			break;
+	}
+
+	while (count-- > 0)
+		*dst++ = '\0';
+
+	return dst0;
+#endif /* not PREFER_SIZE_OVER_SPEED */
 }

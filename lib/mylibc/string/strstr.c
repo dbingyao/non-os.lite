@@ -1,45 +1,81 @@
 /*
- *  linux/lib/string.c
- *
- *  Copyright (C) 1991, 1992  Linus Torvalds
+ * newlib-2.0.0
  */
 
-/*
- * stupid library routines.. The optimized versions should generally be found
- * as inline code in <asm-xx/string.h>
- *
- * These are buggy as well..
- *
- * * Fri Jun 25 1999, Ingo Oeser <ioe@informatik.tu-chemnitz.de>
- * -  Added strsep() which will replace strtok() soon (because strsep() is
- *    reentrant and should be faster). Use only strsep() in new code, please.
- *
- * * Sat Feb 09 2002, Jason Thomas <jason@topic.com.au>,
- *                    Matthew Hawkins <matt@mh.dropbear.id.au>
- * -  Kissed strtok() goodbye
- */
-
-#include <stdlib.h>
 #include <string.h>
 
-/**
- * strstr - Find the first substring in a %NUL terminated string
- * @s1: The string to be searched
- * @s2: The string to search for
- */
-char *strstr(const char *s1, const char *s2)
-{
-	size_t l1, l2;
+#if !defined(PREFER_SIZE_OVER_SPEED) && !defined(__OPTIMIZE_SIZE__)
+# define RETURN_TYPE char *
+# define AVAILABLE(h, h_l, j, n_l)			\
+  (!memchr ((h) + (h_l), '\0', (j) + (n_l) - (h_l))	\
+   && ((h_l) = (j) + (n_l)))
+# include "str-two-way.h"
+#endif
 
-	l2 = strlen(s2);
-	if (!l2)
-		return (char *)s1;
-	l1 = strlen(s1);
-	while (l1 >= l2) {
-		l1--;
-		if (!memcmp(s1, s2, l2))
-			return (char *)s1;
-		s1++;
+char *strstr(const char *searchee, const char *lookfor)
+{
+#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+
+	/* Less code size, but quadratic performance in the worst case.  */
+	if (*searchee == 0) {
+		if (*lookfor)
+			return (char *) NULL;
+		return (char *) searchee;
 	}
-	return NULL;
+
+	while (*searchee) {
+		size_t i;
+		i = 0;
+
+		while (1) {
+			if (lookfor[i] == 0) {
+				return (char *) searchee;
+			}
+
+			if (lookfor[i] != searchee[i]) {
+				break;
+			}
+			i++;
+		}
+		searchee++;
+	}
+
+	return (char *) NULL;
+
+#else /* compilation for speed */
+
+	/* Larger code size, but guaranteed linear performance.  */
+	const char *haystack = searchee;
+	const char *needle = lookfor;
+	size_t needle_len; /* Length of NEEDLE.  */
+	size_t haystack_len; /* Known minimum length of HAYSTACK.  */
+	int ok = 1; /* True if NEEDLE is prefix of HAYSTACK.  */
+
+	/* Determine length of NEEDLE, and in the process, make sure
+	   HAYSTACK is at least as long (no point processing all of a long
+	   NEEDLE if HAYSTACK is too short).  */
+	while (*haystack && *needle)
+		ok &= *haystack++ == *needle++;
+	if (*needle)
+		return NULL;
+	if (ok)
+		return (char *) searchee;
+
+	/* Reduce the size of haystack using strchr, since it has a smaller
+	   linear coefficient than the Two-Way algorithm.  */
+	needle_len = needle - lookfor;
+	haystack = strchr(searchee + 1, *lookfor);
+	if (!haystack || needle_len == 1)
+		return (char *) haystack;
+	haystack_len = (haystack > searchee + needle_len ? 1
+					: needle_len + searchee - haystack);
+
+	/* Perform the search.  */
+	if (needle_len < LONG_NEEDLE_THRESHOLD)
+		return two_way_short_needle((const unsigned char *) haystack,
+									haystack_len,
+									(const unsigned char *) lookfor, needle_len);
+	return two_way_long_needle((const unsigned char *) haystack, haystack_len,
+							   (const unsigned char *) lookfor, needle_len);
+#endif /* compilation for speed */
 }

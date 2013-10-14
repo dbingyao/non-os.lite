@@ -1,40 +1,63 @@
 /*
- *  linux/lib/string.c
- *
- *  Copyright (C) 1991, 1992  Linus Torvalds
+ * newlib-2.0.0
  */
 
-/*
- * stupid library routines.. The optimized versions should generally be found
- * as inline code in <asm-xx/string.h>
- *
- * These are buggy as well..
- *
- * * Fri Jun 25 1999, Ingo Oeser <ioe@informatik.tu-chemnitz.de>
- * -  Added strsep() which will replace strtok() soon (because strsep() is
- *    reentrant and should be faster). Use only strsep() in new code, please.
- *
- * * Sat Feb 09 2002, Jason Thomas <jason@topic.com.au>,
- *                    Matthew Hawkins <matt@mh.dropbear.id.au>
- * -  Kissed strtok() goodbye
- */
-
-#include <stdlib.h>
 #include <string.h>
 
-/**
- * memset - Fill a region of memory with the given value
- * @s: Pointer to the start of the area.
- * @c: The byte to fill the area with
- * @count: The size of the area.
- *
- * Do not use memset() to access IO space, use memset_io() instead.
- */
-void *memset(void *s, int c, size_t count)
-{
-	char *xs = s;
+#define LBLOCKSIZE (sizeof(long))
+#define UNALIGNED(X)   ((long)X & (LBLOCKSIZE - 1))
+#define TOO_SMALL(LEN) ((LEN) < LBLOCKSIZE)
 
-	while (count--)
-		*xs++ = c;
-	return s;
+void *memset(void *m, int c, size_t n)
+{
+	char *s = (char *) m;
+
+#if !defined(PREFER_SIZE_OVER_SPEED) && !defined(__OPTIMIZE_SIZE__)
+	int i;
+	unsigned long buffer;
+	unsigned long *aligned_addr;
+	unsigned int d = c & 0xff;	/* To avoid sign extension, copy C to an
+				   unsigned variable.  */
+
+	while (UNALIGNED(s)) {
+		if (n--)
+			*s++ = (char) c;
+		else
+			return m;
+	}
+
+	if (!TOO_SMALL(n)) {
+		/* If we get this far, we know that n is large and s is word-aligned. */
+		aligned_addr = (unsigned long *) s;
+
+		/* Store D into each char sized location in BUFFER so that
+		   we can set large blocks quickly.  */
+		buffer = (d << 8) | d;
+		buffer |= (buffer << 16);
+		for (i = 32; i < LBLOCKSIZE * 8; i <<= 1)
+			buffer = (buffer << i) | buffer;
+
+		/* Unroll the loop.  */
+		while (n >= LBLOCKSIZE * 4) {
+			*aligned_addr++ = buffer;
+			*aligned_addr++ = buffer;
+			*aligned_addr++ = buffer;
+			*aligned_addr++ = buffer;
+			n -= 4 * LBLOCKSIZE;
+		}
+
+		while (n >= LBLOCKSIZE) {
+			*aligned_addr++ = buffer;
+			n -= LBLOCKSIZE;
+		}
+		/* Pick up the remainder with a bytewise loop.  */
+		s = (char *)aligned_addr;
+	}
+
+#endif /* not PREFER_SIZE_OVER_SPEED */
+
+	while (n--)
+		*s++ = (char) c;
+
+	return m;
 }

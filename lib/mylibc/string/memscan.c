@@ -41,5 +41,5 @@ void *memscan(void *addr, int c, size_t size)
 		p++;
 		size--;
 	}
-  	return (void *)p;
+	return (void *)p;
 }

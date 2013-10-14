@@ -1,52 +1,91 @@
 /*
- *  linux/lib/string.c
- *
- *  Copyright (C) 1991, 1992  Linus Torvalds
+ * newlib-2.0.0
  */
 
-/*
- * stupid library routines.. The optimized versions should generally be found
- * as inline code in <asm-xx/string.h>
- *
- * These are buggy as well..
- *
- * * Fri Jun 25 1999, Ingo Oeser <ioe@informatik.tu-chemnitz.de>
- * -  Added strsep() which will replace strtok() soon (because strsep() is
- *    reentrant and should be faster). Use only strsep() in new code, please.
- *
- * * Sat Feb 09 2002, Jason Thomas <jason@topic.com.au>,
- *                    Matthew Hawkins <matt@mh.dropbear.id.au>
- * -  Kissed strtok() goodbye
- */
-
-#include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
+#include <limits.h>
 
-/**
- * memmove - Copy one area of memory to another
- * @dest: Where to copy to
- * @src: Where to copy from
- * @count: The size of the area.
- *
- * Unlike memcpy(), memmove() copes with overlapping areas.
- */
-void *memmove(void *dest, const void *src, size_t count)
+/* Nonzero if either X or Y is not aligned on a "long" boundary.  */
+#define UNALIGNED(X, Y) \
+  (((long)X & (sizeof (long) - 1)) | ((long)Y & (sizeof (long) - 1)))
+
+/* How many bytes are copied each iteration of the 4X unrolled loop.  */
+#define BIGBLOCKSIZE    (sizeof (long) << 2)
+
+/* How many bytes are copied each iteration of the word copy loop.  */
+#define LITTLEBLOCKSIZE (sizeof (long))
+
+/* Threshhold for punting to the byte copier.  */
+#define TOO_SMALL(LEN)  ((LEN) < BIGBLOCKSIZE)
+
+/*SUPPRESS 20*/
+void *memmove(void *dst_void, const void *src_void, size_t length)
 {
-	char *tmp;
-	const char *s;
+#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+	char *dst = dst_void;
+	const char *src = src_void;
 
-	if (dest <= src) {
-		tmp = dest;
-		s = src;
-		while (count--)
-			*tmp++ = *s++;
+	if (src < dst && dst < src + length) {
+		/* Have to copy backwards */
+		src += length;
+		dst += length;
+		while (length--) {
+			*--dst = *--src;
+		}
 	} else {
-		tmp = dest;
-		tmp += count;
-		s = src;
-		s += count;
-		while (count--)
-			*--tmp = *--s;
+		while (length--) {
+			*dst++ = *src++;
+		}
 	}
-	return dest;
+
+	return dst_void;
+#else
+	char *dst = dst_void;
+	const char *src = src_void;
+	long *aligned_dst;
+	const long *aligned_src;
+
+	if (src < dst && dst < src + length) {
+		/* Destructive overlap...have to copy backwards */
+		src += length;
+		dst += length;
+		while (length--) {
+			*--dst = *--src;
+		}
+	} else {
+		/* Use optimizing algorithm for a non-destructive copy to closely
+		   match memcpy. If the size is small or either SRC or DST is unaligned,
+		   then punt into the byte copy loop.  This should be rare.  */
+		if (!TOO_SMALL(length) && !UNALIGNED(src, dst)) {
+			aligned_dst = (long *)dst;
+			aligned_src = (long *)src;
+
+			/* Copy 4X long words at a time if possible.  */
+			while (length >= BIGBLOCKSIZE) {
+				*aligned_dst++ = *aligned_src++;
+				*aligned_dst++ = *aligned_src++;
+				*aligned_dst++ = *aligned_src++;
+				*aligned_dst++ = *aligned_src++;
+				length -= BIGBLOCKSIZE;
+			}
+
+			/* Copy one long word at a time if possible.  */
+			while (length >= LITTLEBLOCKSIZE) {
+				*aligned_dst++ = *aligned_src++;
+				length -= LITTLEBLOCKSIZE;
+			}
+
+			/* Pick up any residual with a byte copier.  */
+			dst = (char *)aligned_dst;
+			src = (char *)aligned_src;
+		}
+
+		while (length--) {
+			*dst++ = *src++;
+		}
+	}
+
+	return dst_void;
+#endif /* not PREFER_SIZE_OVER_SPEED */
 }

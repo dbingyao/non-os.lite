@@ -1,49 +1,20 @@
 /*
- *  linux/lib/string.c
+ * Copyright (C) 2002     Manuel Novoa III
+ * Copyright (C) 2000-2005 Erik Andersen <andersen@uclibc.org>
  *
- *  Copyright (C) 1991, 1992  Linus Torvalds
+ * Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
  */
 
-/*
- * stupid library routines.. The optimized versions should generally be found
- * as inline code in <asm-xx/string.h>
- *
- * These are buggy as well..
- *
- * * Fri Jun 25 1999, Ingo Oeser <ioe@informatik.tu-chemnitz.de>
- * -  Added strsep() which will replace strtok() soon (because strsep() is
- *    reentrant and should be faster). Use only strsep() in new code, please.
- *
- * * Sat Feb 09 2002, Jason Thomas <jason@topic.com.au>,
- *                    Matthew Hawkins <matt@mh.dropbear.id.au>
- * -  Kissed strtok() goodbye
- */
-
-#include <stdlib.h>
 #include <string.h>
 
-/**
- * strsep - Split a string into tokens
- * @s: The string to be searched
- * @ct: The characters to search for
- *
- * strsep() updates @s to point after the token, ready for the next call.
- *
- * It returns empty tokens, too, behaving exactly like the libc function
- * of that name. In fact, it was stolen from glibc2 and de-fancy-fied.
- * Same semantics, slimmer shape. ;)
- */
-char *strsep(char **s, const char *ct)
+char *strsep(char **s1, const char *s2)
 {
-	char *sbegin = *s;
-	char *end;
+	register char *s = *s1;
+	register char *p = NULL;
 
-	if (sbegin == NULL)
-		return NULL;
+	if (s && *s && (p = strpbrk(s, s2)))
+		* p++ = 0;
 
-	end = strpbrk(sbegin, ct);
-	if (end)
-		*end++ = '\0';
-	*s = end;
-	return sbegin;
+	*s1 = p;
+	return s;
 }

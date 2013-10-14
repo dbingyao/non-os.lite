@@ -1,36 +1,55 @@
 /*
- *  linux/lib/string.c
- *
- *  Copyright (C) 1991, 1992  Linus Torvalds
+ * newlib-2.0.0
  */
 
-/*
- * stupid library routines.. The optimized versions should generally be found
- * as inline code in <asm-xx/string.h>
- *
- * These are buggy as well..
- *
- * * Fri Jun 25 1999, Ingo Oeser <ioe@informatik.tu-chemnitz.de>
- * -  Added strsep() which will replace strtok() soon (because strsep() is
- *    reentrant and should be faster). Use only strsep() in new code, please.
- *
- * * Sat Feb 09 2002, Jason Thomas <jason@topic.com.au>,
- *                    Matthew Hawkins <matt@mh.dropbear.id.au>
- * -  Kissed strtok() goodbye
- */
-
-#include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
-/**
- * strlen - Find the length of a string
- * @s: The string to be sized
- */
-size_t strlen(const char *s)
+#define LBLOCKSIZE   (sizeof (long))
+#define UNALIGNED(X) ((long)X & (LBLOCKSIZE - 1))
+
+#if LONG_MAX == 2147483647L
+#define DETECTNULL(X) (((X) - 0x01010101) & ~(X) & 0x80808080)
+#else
+#if LONG_MAX == 9223372036854775807L
+/* Nonzero if X (a long int) contains a NULL byte. */
+#define DETECTNULL(X) (((X) - 0x0101010101010101) & ~(X) & 0x8080808080808080)
+#else
+#error long int is not a 32bit or 64bit type.
+#endif
+#endif
+
+#ifndef DETECTNULL
+#error long int is not a 32bit or 64bit byte
+#endif
+
+size_t strlen(const char *str)
 {
-	const char *sc;
+	const char *start = str;
 
-	for (sc = s; *sc != '\0'; ++sc)
-		/* nothing */;
-	return sc - s;
+#if !defined(PREFER_SIZE_OVER_SPEED) && !defined(__OPTIMIZE_SIZE__)
+	unsigned long *aligned_addr;
+
+	/* Align the pointer, so we can search a word at a time.  */
+	while (UNALIGNED(str)) {
+		if (!*str)
+			return str - start;
+		str++;
+	}
+
+	/* If the string is word-aligned, we can check for the presence of
+	   a null in each word-sized block.  */
+	aligned_addr = (unsigned long *)str;
+	while (!DETECTNULL(*aligned_addr))
+		aligned_addr++;
+
+	/* Once a null is detected, we check each byte in that block for a
+	   precise position of the null.  */
+	str = (char *) aligned_addr;
+
+#endif /* not PREFER_SIZE_OVER_SPEED */
+
+	while (*str)
+		str++;
+	return str - start;
 }

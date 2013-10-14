@@ -1,49 +1,68 @@
 /*
- *  linux/lib/string.c
- *
- *  Copyright (C) 1991, 1992  Linus Torvalds
+ * newlib-2.0.0
  */
 
-/*
- * stupid library routines.. The optimized versions should generally be found
- * as inline code in <asm-xx/string.h>
- *
- * These are buggy as well..
- *
- * * Fri Jun 25 1999, Ingo Oeser <ioe@informatik.tu-chemnitz.de>
- * -  Added strsep() which will replace strtok() soon (because strsep() is
- *    reentrant and should be faster). Use only strsep() in new code, please.
- *
- * * Sat Feb 09 2002, Jason Thomas <jason@topic.com.au>,
- *                    Matthew Hawkins <matt@mh.dropbear.id.au>
- * -  Kissed strtok() goodbye
- */
-
-#include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
-/**
- * strncat - Append a length-limited, %NUL-terminated string to another
- * @dest: The string to be appended to
- * @src: The string to append to it
- * @count: The maximum numbers of bytes to copy
- *
- * Note that in contrast to strncpy(), strncat() ensures the result is
- * terminated.
- */
-char *strncat(char *dest, const char *src, size_t count)
+/* Nonzero if X is aligned on a "long" boundary.  */
+#define ALIGNED(X) \
+  (((long)X & (sizeof (long) - 1)) == 0)
+
+#if LONG_MAX == 2147483647L
+#define DETECTNULL(X) (((X) - 0x01010101) & ~(X) & 0x80808080)
+#else
+#if LONG_MAX == 9223372036854775807L
+/* Nonzero if X (a long int) contains a NULL byte. */
+#define DETECTNULL(X) (((X) - 0x0101010101010101) & ~(X) & 0x8080808080808080)
+#else
+#error long int is not a 32bit or 64bit type.
+#endif
+#endif
+
+#ifndef DETECTNULL
+#error long int is not a 32bit or 64bit byte
+#endif
+
+char *strncat(char *s1, const char *s2, size_t n)
 {
-	char *tmp = dest;
+#if defined(PREFER_SIZE_OVER_SPEED) || defined(__OPTIMIZE_SIZE__)
+	char *s = s1;
 
-	if (count) {
-		while (*dest)
-			dest++;
-		while ((*dest++ = *src++) != 0) {
-			if (--count == 0) {
-				*dest = '\0';
-				break;
-			}
-		}
+	while (*s1)
+		s1++;
+	while (n-- != 0 && (*s1++ = *s2++)) {
+		if (n == 0)
+			*s1 = '\0';
 	}
-	return tmp;
+
+	return s;
+#else
+	char *s = s1;
+
+	/* Skip over the data in s1 as quickly as possible.  */
+	if (ALIGNED(s1)) {
+		unsigned long *aligned_s1 = (unsigned long *)s1;
+		while (!DETECTNULL(*aligned_s1))
+			aligned_s1++;
+
+		s1 = (char *)aligned_s1;
+	}
+
+	while (*s1)
+		s1++;
+
+	/* s1 now points to the its trailing null character, now copy
+	   up to N bytes from S2 into S1 stopping if a NULL is encountered
+	   in S2.
+
+	   It is not safe to use strncpy here since it copies EXACTLY N
+	   characters, NULL padding if necessary.  */
+	while (n-- != 0 && (*s1++ = *s2++)) {
+		if (n == 0)
+			*s1 = '\0';
+	}
+
+	return s;
+#endif /* not PREFER_SIZE_OVER_SPEED */
 }

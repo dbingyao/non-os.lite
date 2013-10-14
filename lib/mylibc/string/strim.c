@@ -21,6 +21,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 /**
  * skip_spaces - Removes leading whitespace from @str.
