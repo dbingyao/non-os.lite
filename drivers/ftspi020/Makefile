@@ -17,8 +17,8 @@
  # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  ##
 
-drvobjs-$(CONFIG_FTSPI020) += ftspi020/cmd_ftspi020.o ftspi020/ftspi020_mxic.o ftspi020/ftspi020_sst.o \
-			      ftspi020/ftspi020_cntr.o ftspi020/ftspi020_spansion.o ftspi020/ftspi020_winbond.o ftspi020/random.o 
+drvobjs-$(CONFIG_FTSPI020) += $(addprefix ftspi020/, cmd_ftspi020.o ftspi020_mxic.o ftspi020_sst.o \
+			      ftspi020_cntr.o ftspi020_spansion.o ftspi020_winbond.o ftspi020_nand.o random.o)
 
-drvobjs-$(CONFIG_FTDMAC020) += ftspi020/ftspi020_dma.o
-drvobjs-$(CONFIG_FTDMAC030) += ftspi020/ftspi020_dmac030.o
+drvobjs-$(CONFIG_FTDMAC020) += $(addprefix ftspi020/, ftspi020_dma.o)
+drvobjs-$(CONFIG_FTDMAC030) += $(addprefix ftspi020/, ftspi020_dmac030.o)

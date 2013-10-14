@@ -46,6 +46,8 @@ typedef enum {
 #define Winbond_W25Q128BV
 #define Spansion_S25FL032P
 #define Spansion_S25FL128S
+#define ZENTEL_A5U12A21ASC
+#define GIGADEV_GD5F1GQ4UAW
 
 #if defined(Winbond_W25Q32BV) || defined(Winbond_W25Q128BV)
 #include "ftspi020_winbond.h"
@@ -61,6 +63,10 @@ typedef enum {
 
 #if defined(Spansion_S25FL032P) || defined(Spansion_S25FL128S)
 #include "ftspi020_spansion.h"
+#endif
+
+#if defined(ZENTEL_A5U12A21ASC) || defined(GIGADEV_GD5F1GQ4UAW)
+#include "ftspi020_nand.h"
 #endif
 
 #define FTSPI020_USE_INTERRUPT
@@ -221,9 +227,9 @@ struct spi_flash {
 	uint32_t nr_pages;
 	uint32_t size;
 	int(*spi_xfer)(struct spi_flash * flash, unsigned int len, const void *dout, void *din, unsigned long flags);
-	int(*read) (struct spi_flash * flash, uint8_t type, uint32_t offset, uint32_t len, void *buf);
-	int(*write) (struct spi_flash * flash, uint8_t type, uint32_t offset, uint32_t len, void *buf);
-	int(*erase) (struct spi_flash * flash, uint8_t type, uint32_t offset, uint32_t len);
+	int(*read) (struct spi_flash * flash, uint8_t type, uint32_t offset, size_t total_len, void *buf);
+	int(*write) (struct spi_flash * flash, uint8_t type, uint32_t offset, size_t total_len, void *buf);
+	int(*erase) (struct spi_flash * flash, uint8_t type, uint32_t offset, size_t total_len);
 	int(*erase_all) (struct spi_flash * flash);
 	int(*report_status) (struct spi_flash * flash);
 	char * (*get_string) (uint32_t act, uint32_t type);
@@ -231,6 +237,14 @@ struct spi_flash {
 	uint16_t max_rd_type;
 	uint16_t max_wr_type;
 	uint16_t max_er_type;
+
+	/* SPI Nand flash */
+	int(*read_spare) (struct spi_flash * flash, uint32_t row_addr, uint32_t col_addr, size_t total_len, char *buf);
+	int(*write_spare) (struct spi_flash * flash, uint32_t row_addr, uint32_t col_addr, size_t total_len, void *buf);
+	int(*copy_data) (struct spi_flash * flash, uint32_t src_row, uint32_t dst_row, uint32_t dst_col,
+			 void * buf, size_t total_len);
+	int(*is_bad_block) (struct spi_flash * flash, uint32_t offset);
+	int(*scan_bad_blocks) (struct spi_flash * flash);
 };
 
 struct ftspi020_cmd {

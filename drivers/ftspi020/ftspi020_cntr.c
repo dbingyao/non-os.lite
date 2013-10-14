@@ -94,14 +94,30 @@ void FTSPI020_command_based(void)
 	FTSPI020_32BIT(CONTROL_REG) &= ~BOOT_MODE;
 }
 
-void FTSPI020_rxfifo_full(void)
+int FTSPI020_rxfifo_full(void)
 {
-	while (!(FTSPI020_32BIT(STATUS_REG) & BIT1)) ;
+	int i = 0;
+
+	while (i++ < 0x10000) {
+		if (FTSPI020_32BIT(STATUS_REG) & BIT1)
+			return 0;
+	}
+
+	prints (" Rx FIFO no data !\n");
+	return i;
 }
 
-void FTSPI020_txfifo_empty(void)
+int FTSPI020_txfifo_empty(void)
 {
-	while (!(FTSPI020_32BIT(STATUS_REG) & BIT0)) ;
+	int i = 0;
+
+	while (i++ < 0x10000) {
+		if (FTSPI020_32BIT(STATUS_REG) & BIT0)
+			return 0;
+	}
+
+	prints (" Tx FIFO not empty !\n");
+	return i;
 }
 
 int FTSPI020_txfifo_depth(void)
@@ -180,7 +196,7 @@ int FTSPI020_init(void)
 	disable_interrupts();
 	FTSPI020_cmd_complete_intr_enable(0);
 
-	g_spi020_wr_buf_length =  g_spi020_rd_buf_length = 0x800000;
+	g_spi020_wr_buf_length =  g_spi020_rd_buf_length = 0x400000;
 	g_spi020_wr_buf_addr = (int) malloc(g_spi020_wr_buf_length << 1);
 	if (!g_spi020_wr_buf_addr) {
 		prints("Allocate memory for read/write buffer failed\n");
@@ -195,65 +211,6 @@ int FTSPI020_init(void)
 	return 0;
 }
 
-struct spi_flash *FTSPI020_probe(uint32_t ce)
-{
-	int ret;
-	uint8_t idcode[3];
-	struct spi_flash *flash;
-	struct ftspi020_cmd spi_cmd = {0};
-
-	spi_cmd.start_ce = ce;
-	spi_cmd.ins_code = CMD_READ_ID;
-	spi_cmd.ins_len = instr_1byte;
-	spi_cmd.write_en = spi_read;
-	spi_cmd.dtr_mode = dtr_disable;
-	spi_cmd.spi_mode = spi_operate_serial_mode;
-	spi_cmd.data_cnt = 3;
-
-	FTSPI020_issue_cmd(&spi_cmd);
-	FTSPI020_data_access(NULL, idcode, sizeof(idcode));
-	ret = FTSPI020_wait_cmd_complete(10);
-	if (ret) {
-		goto err;
-	}
-
-	prints("SF: Got idcode %02x %02x %02x\n", idcode[0], idcode[1], idcode[2]);
-
-	switch (idcode[0]) {
-#if defined(Winbond_W25Q32BV) || defined(Winbond_W25Q128BV)
-	case 0xEF:
-		flash = spi_flash_probe_winbond(idcode); 
-		break;
-#endif
-#if defined(Mxic_MX25L12845EM1)
-	case 0xC2:
-		flash = spi_flash_probe_mxic(idcode);
-		break;
-#endif
-#if defined(Spansion_S25FL032P) || defined(Spansion_S25FL128S)
-	case 0x01:
-		flash = spi_flash_probe_spansion(idcode);
-		break;
-#endif
-#if defined(Sst_SST25VF080B)
-	case 0xBF:
-		flash = spi_flash_probe_sst(idcode);
-		break;
-#endif
-	default:
-		prints("SF: Unsupported manufacturer 0x%02X @ CE %d\n", idcode[0], ce);
-		flash = NULL;
-		break;
-	}
-
-	if (flash)
-		flash->ce = ce;
-
-	return flash;
-
-      err:
-	return NULL;
-}
 
 int spi_flash_cmd(struct spi_flash *slave, uint8_t * cmd, void *response, size_t len)
 {
@@ -452,14 +409,36 @@ int FTSPI020_wait_cmd_complete(uint32_t wait_ms)
 	return 0;
 }
 
-void FTSPI020_data_access(uint8_t * dout, uint8_t * din, uint32_t len)
+int FTSPI020_data_access(uint8_t * dout, uint8_t * din, uint32_t len)
 {
+	int ret = 0;
+	int access_byte, total_byte;
+	uint8_t *alloc_buf, *buf;
+
+	/* buffer not 4 byte alignment */
+	if (dout) {
+		if ((int)dout & 0x3) {
+			alloc_buf = (char *) memalign(((len + 4) & ~0x3), 4);
+			buf = alloc_buf;
+			memcpy(buf, dout, len);
+		} else
+			buf = dout;
+	} else if (din) {
+		if ((int)din & 0x3) {
+			alloc_buf = (char *) memalign(((len + 4) & ~0x3), 4);
+			buf = alloc_buf;
+		} else
+			buf = din;
+	} else {
+		prints (" No buffer pointer for data in or out !\n");
+		return 1;
+	}
+
 #ifdef FTSPI020_USE_DMA
 	if (g_trans_mode == DMA) {
-		int ret;
 
 		if (dout != NULL) {
-			ret = ftspi020_Start_DMA(FTSPI020_DMA_RD_CHNL, (int) dout,
+			ret = ftspi020_Start_DMA(FTSPI020_DMA_RD_CHNL, (int) buf,
 					(int) (FTSPI020_REG_BASE + SPI020_DATA_PORT), len, 0x0,
 					0x0, 4, 0, 2, FTSPI020_DMA_PRIORITY);
 		} else if (din != NULL) {
@@ -468,7 +447,7 @@ void FTSPI020_data_access(uint8_t * dout, uint8_t * din, uint32_t len)
 				len = (len + 4) & ~0x3;
 
 			ret = ftspi020_Start_DMA(FTSPI020_DMA_RD_CHNL, (int) (FTSPI020_REG_BASE + SPI020_DATA_PORT),
-					(int) din, len, 0x2, 0x2, 2, 2, 0, FTSPI020_DMA_PRIORITY);
+					(int) buf, len, 0x2, 0x2, 2, 2, 0, FTSPI020_DMA_PRIORITY);
 		}
 
 		if (ret)
@@ -476,99 +455,80 @@ void FTSPI020_data_access(uint8_t * dout, uint8_t * din, uint32_t len)
 	} else {
 #endif
 #if defined(WORD_ACCESS)
-		int access_byte, total_byte = len;
+
+		total_byte = len;
 
 		if (dout != NULL) {
 			while (total_byte > 0) {
-				FTSPI020_txfifo_empty();
+				ret = FTSPI020_txfifo_empty();
+				if (ret)
+					goto done;
+
 				access_byte = min_t(total_byte, FTSPI020_txfifo_depth());
 				total_byte -= access_byte;
 				while (access_byte > 0) {
-					if (access_byte >= 4) {
-						FTSPI020_32BIT(SPI020_DATA_PORT) = *((int *) dout);
-						dout += 4;
-						access_byte -= 4;
-					} else if (access_byte == 3) {
-						FTSPI020_16BIT(SPI020_DATA_PORT) = *((uint16_t *) dout);
-						dout += 2;
-						FTSPI020_8BIT(SPI020_DATA_PORT) = *((uint8_t *) dout);
-						dout += 1;
-						access_byte -= 3;
-					} else if (access_byte == 2) {
-						FTSPI020_16BIT(SPI020_DATA_PORT) = *((uint16_t *) dout);
-						dout += 2;
-						access_byte -= 2;
-					} else {
-						FTSPI020_8BIT(SPI020_DATA_PORT) = *((uint8_t *) dout);
-						dout += 1;
-						access_byte -= 1;
-					}
+					FTSPI020_32BIT(SPI020_DATA_PORT) = *((int *) buf);
+					buf += 4;
+					access_byte -= 4;
 				}
 			}
-			//FTSPI020_check_tx_counter(len);
+
 		} else if (din != NULL) {
 			while (total_byte > 0) {
-				FTSPI020_rxfifo_full();
+				ret = FTSPI020_rxfifo_full();
+				if (ret)
+					goto done;
+
 				access_byte = min_t(total_byte, FTSPI020_rxfifo_depth());
 				total_byte -= access_byte;
 				while (access_byte > 0) {
-					if (access_byte >= 4) {
-						*((int *) din) = FTSPI020_32BIT(SPI020_DATA_PORT);
-						din += 4;
-						access_byte -= 4;
-					} else if (access_byte == 3) {
-						*((uint16_t *) din) = FTSPI020_16BIT(SPI020_DATA_PORT);
-						din += 2;
-						*((uint8_t *) din) = FTSPI020_8BIT(SPI020_DATA_PORT);
-						din += 1;
-						access_byte -= 3;
-					} else if (access_byte == 2) {
-						*((uint16_t *) din) = FTSPI020_16BIT(SPI020_DATA_PORT);
-						din += 2;
-						access_byte -= 2;
+					if (access_byte < 4) {
+						while (access_byte) {
+							*buf++ = FTSPI020_8BIT(SPI020_DATA_PORT);
+							access_byte--;
+						}
 					} else {
-						*((uint8_t *) din) = FTSPI020_8BIT(SPI020_DATA_PORT);
-						din += 1;
-						access_byte -= 1;
+						*((int *) buf) = FTSPI020_32BIT(SPI020_DATA_PORT);
+						buf += 4;
+						access_byte -= 4;
 					}
 				}
 			}
-			//FTSPI020_check_rx_counter(len);
+
 		}
 #elif defined(HALFWORD_ACCESS)
 		int access_byte, total_byte = len;
 		if (dout != NULL) {
 			while (total_byte > 0) {
-				FTSPI020_txfifo_empty();
+				ret = FTSPI020_txfifo_empty();
+				if (ret)
+					goto done;
 				access_byte = min_t(total_byte, FTSPI020_txfifo_depth());
 				total_byte -= access_byte;
 				while (access_byte > 0) {
-					if (access_byte >= 2) {
-						FTSPI020_16BIT(SPI020_DATA_PORT) = *((uint16_t *) dout);
-						dout += 2;
-						access_byte -= 2;
-					} else {
-						FTSPI020_8BIT(SPI020_DATA_PORT) = *((uint8_t *) dout);
-						dout += 1;
-						access_byte -= 1;
-					}
+					FTSPI020_16BIT(SPI020_DATA_PORT) = *((uint16_t *) buf);
+					buf += 2;
+					access_byte -= 2;
 				}
 			}
 			//FTSPI020_check_tx_counter(len);
 		} else if (din != NULL) {
 			while (total_byte > 0) {
-				FTSPI020_rxfifo_full();
+				ret = FTSPI020_rxfifo_full();
+				if (ret)
+					goto done;
 				access_byte = min_t(total_byte, FTSPI020_rxfifo_depth());
 				total_byte -= access_byte;
 				while (access_byte > 0) {
-					if (access_byte >= 2) {
-						*((uint16_t *) din) = FTSPI020_16BIT(SPI020_DATA_PORT);
-						din += 2;
-						access_byte -= 2;
+					if (access_byte < 3) {
+						while (access_byte) {
+							*buf++ = FTSPI020_8BIT(SPI020_DATA_PORT);
+							access_byte--;
+						}
 					} else {
-						*((uint8_t *) din) = FTSPI020_8BIT(SPI020_DATA_PORT);
-						din += 1;
-						access_byte -= 1;
+						*((uint16_t *) buf) = FTSPI020_16BIT(SPI020_DATA_PORT);
+						buf += 2;
+						access_byte -= 2;
 					}
 				}
 			}
@@ -577,7 +537,9 @@ void FTSPI020_data_access(uint8_t * dout, uint8_t * din, uint32_t len)
 		int access_byte, total_byte = len;
 		if (dout != NULL) {
 			while (total_byte > 0) {
-				FTSPI020_txfifo_empty();
+				ret = FTSPI020_txfifo_empty();
+				if (ret)
+					return ret;
 				access_byte = min_t(total_byte, FTSPI020_txfifo_depth());
 				total_byte -= access_byte;
 				while (access_byte > 0) {
@@ -589,7 +551,9 @@ void FTSPI020_data_access(uint8_t * dout, uint8_t * din, uint32_t len)
 			//FTSPI020_check_tx_counter(len);
 		} else if (din != NULL) {
 			while (total_byte > 0) {
-				FTSPI020_rxfifo_full();
+				ret = FTSPI020_rxfifo_full();
+				if (ret)
+					return ret;
 				access_byte = min_t(total_byte, FTSPI020_rxfifo_depth());
 				total_byte -= access_byte;
 				while (access_byte > 0) {
@@ -603,6 +567,18 @@ void FTSPI020_data_access(uint8_t * dout, uint8_t * din, uint32_t len)
 #ifdef FTSPI020_USE_DMA
 	}
 #endif
+
+done:
+	if ((dout && (int)dout & 0x3) ||
+	    (din && (int)din & 0x3)) {
+		if (din && !ret) {
+			memcpy(din, alloc_buf, (len - total_byte));
+		}
+
+		free(alloc_buf);
+	}
+
+	return ret;
 }
 
 void FTSPI020_Interrupt_Handler(void *data)
@@ -618,4 +594,74 @@ void FTSPI020_Interrupt_Handler(void *data)
 	} else {
 		prints(" ISR: No status\n");
 	}
+}
+
+struct spi_flash *FTSPI020_probe(uint32_t ce)
+{
+	uint8_t idcode[3];
+	struct spi_flash *flash;
+	struct ftspi020_cmd spi_cmd = {0};
+
+	flash = NULL;
+
+	spi_cmd.start_ce = ce;
+	spi_cmd.ins_code = CMD_READ_ID;
+	spi_cmd.ins_len = instr_1byte;
+	spi_cmd.write_en = spi_read;
+	spi_cmd.dtr_mode = dtr_disable;
+	spi_cmd.spi_mode = spi_operate_serial_mode;
+	spi_cmd.data_cnt = 3;
+
+	FTSPI020_issue_cmd(&spi_cmd);
+	if (FTSPI020_data_access(NULL, idcode, sizeof(idcode))){
+		FTSPI020_reset_hw();
+		goto err;
+	}
+
+	if (FTSPI020_wait_cmd_complete(10)){
+		FTSPI020_reset_hw();
+		goto err;
+	}
+
+	prints("SF:%d: Got idcode %02x %02x %02x\n", ce, idcode[0], idcode[1], idcode[2]);
+
+	switch (idcode[0]) {
+#if defined(Winbond_W25Q32BV) || defined(Winbond_W25Q128BV)
+	case 0xEF:
+		flash = spi_flash_probe_winbond(idcode);
+		break;
+#endif
+#if defined(Mxic_MX25L12845EM1)
+	case 0xC2:
+		flash = spi_flash_probe_mxic(idcode);
+		break;
+#endif
+#if defined(Spansion_S25FL032P) || defined(Spansion_S25FL128S)
+	case 0x01:
+		flash = spi_flash_probe_spansion(idcode);
+		break;
+#endif
+#if defined(Sst_SST25VF080B)
+	case 0xBF:
+		flash = spi_flash_probe_sst(idcode);
+		break;
+#endif
+	default:
+		prints("SF: Unsupported manufacturer 0x%02X @ CE %d\n", idcode[0], ce);
+		break;
+	}
+
+      err:
+	/* Let's try SPI NAND Flash */
+#if defined(ZENTEL_A5U12A21ASC) || defined (GIGADEV_GD5F1GQ4UAW)
+	if (!flash) {
+		prints("SF: Trying to probe SPI NAND flash\n");
+		flash = spi_flash_probe_spinand(ce);
+	}
+#endif
+
+	if (flash)
+		flash->ce = ce;
+
+	return flash;
 }
