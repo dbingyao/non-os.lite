@@ -38,6 +38,8 @@ Makefile.depend: $(depfiles)
 		$(CC) -MM -MG $(CPPFLAGS) $(CFLAGS) -MT $$f $$f | sed 's/.c:/.o:/g' >> Makefile.depend; \
 	done
 
+libc-objs += $(patsubst %.S,%.o,$(wildcard mylibc/string/*.S))
+
 -include Makefile.depend
 
 .PHONY: all
@@ -45,7 +47,7 @@ all: pr_objs libgen.a libm.a libc.a
 
 pr_objs:
 #	@echo "libm objs: $(libm-objs)"
-#	@echo "libc objs: $(libc-objs)"
+	@echo "libc objs: $(libc-objs)"
 
 libgen.a: $(lib-objs)
 	$(AR) -rs $@ $^
