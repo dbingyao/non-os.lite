@@ -48,6 +48,11 @@
  */
 
 /**
+ * AXI to APB bridge controller
+ */
+#define AXI2APB_REG_BASE	0xA0000000
+#define X2P_INTR_OFFSET  	0x80
+/**
  * AXI Controller
  */
 #define	FTAXIC030_REG_BASE 	0xA0100000
@@ -62,6 +67,7 @@
 #define	PORT8_REG_OFFSET	0x38
 #define	PORT9_REG_OFFSET	0x3C
 #define	PORT10_REG_OFFSET	0x40
+#define AXIC_CTR_REG    	0x130
 
 #define	REMAP_REG_OFFSET	0x130
 
@@ -69,6 +75,7 @@
  * FTDMAC030 DMA controller
  */
 #define FTDMAC030_REG_BASE	0xA0200000
+#define DMAC030_PSIVERR_OFFSET  0x30
 
 /**
  * DDR3030 Controller
@@ -147,6 +154,12 @@
 #define	FTSPI020_IRQ    	7
 
 /**
+ * FTSATA100 SATA Host Controller
+ */
+#define FTSATA100_REG_BASE	0xC0000000
+#define FTSATA100_IRQ     	10
+
+/**
  * Common for all platforms
  */
 #define BUSC_REG_BASE FTAXIC030_REG_BASE
@@ -157,6 +170,7 @@
 
 #ifdef __ASSEMBLER__
 .macro  led, num, addr=0
+#ifndef PLATFORM_AXI
 	mov	r7, #\num
 	lsl	r7, r7, #28
 	.if \addr
@@ -166,5 +180,6 @@
 	.endif
 
 	str	r7, [r8]
+#endif
 .endm
 #endif

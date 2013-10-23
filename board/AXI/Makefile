@@ -18,7 +18,7 @@
  ##
 include $(TOP_DIR)/config.mk
 
-board-objs := AXI/board.o AXI/ddr_calib.o
+board-objs := AXI/board.o
 
 depfiles := $(board-objs:.o=.c)
 
