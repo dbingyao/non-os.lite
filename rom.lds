@@ -1,20 +1,19 @@
 /* Entry Point */
 ENTRY(_stext)
- 
+
 /* Specify the memory areas */
 MEMORY
 {
   FLASH (rx)      : ORIGIN = 0x00000000, LENGTH = 0x80000 /*512K*/
   RAM (xrw)       : ORIGIN = 0x10000000, LENGTH = 0x4000000 /*64M*/
 }
- 
+
 /* define stack size and heap size here */
-heap_size = 0x2000000; /*32M*/ 
- 
-/* define beginning of stack */
-__stack_start = ORIGIN(RAM)+LENGTH(RAM);
-/* __stack_end is heap_start + heap_size */
- 
+heap_size = 0x2000000; /*32M*/
+
+/* 4G mem space needs 4096 entry and each entry is 4bytes.*/
+pg_tb_size = 0x4000;
+
 /* Define output sections */
 SECTIONS
 {
@@ -25,7 +24,7 @@ SECTIONS
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
   } >FLASH
- 
+
   /* The program code and other data goes into FLASH */
   .text :
   {
@@ -39,18 +38,18 @@ SECTIONS
     . = ALIGN(4);
     __text_end = .;        /* define a global symbols at end of code */
   } >FLASH
- 
+
    .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH
     .ARM : {
     __exidx_start = .;
       *(.ARM.exidx*)
       __exidx_end = .;
     } >FLASH
- 
+
 
   /* used by the startup to initialize data */
   _sidata = .;
- 
+
   /* Initialized data sections goes into RAM, load LMA copy after code */
   .data : AT ( _sidata )
   {
@@ -58,11 +57,11 @@ SECTIONS
     __data_start = .;  /* create a global symbol at data start */
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
- 
+
     . = ALIGN(4);
     __data_end = .;        /* define a global symbol at data end */
   } >RAM
- 
+
   /* Uninitialized data section */
   . = ALIGN(4);
   .bss :
@@ -73,12 +72,12 @@ SECTIONS
     *(.bss)
     *(.bss*)
     *(COMMON)
- 
+
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end = _ebss;
   } >RAM
- 
+
     . = ALIGN(4);
     end = .;
     .heap :
@@ -86,19 +85,30 @@ SECTIONS
         __heap_start = .;
         . = . + heap_size;
     } > RAM
- 
+
     . = ALIGN(4);
     .stack :
     {
-        __stack_end = .;
+	__stack_end = .;
+	__stack_start = ORIGIN(RAM)+LENGTH(RAM)-0x4000;
+	__stack_size = __stack_start - __stack_end;
+	. = . + __stack_size;
     } > RAM
- 
+
+    . = ALIGN(4);
+	.pg_tb :
+	{
+		__pg_tb_start = .;
+		. = . + pg_tb_size;
+		__pg_tb_end = .;
+	} > RAM
+
     /* Remove information from the standard libraries */
     /DISCARD/ :
     {
         lib/libUtils.a ( * )
         libgcc.a ( * )
     }
- 
+
     .ARM.attributes 0 : { *(.ARM.attributes) }
 }

@@ -186,6 +186,9 @@ _stack_end:
 _stack:
 	.word	__stack_start
 
+	.globl _pg_tb
+_pg_tb:
+	.word	__pg_tb_start
 
 #define S_FRAME_SIZE	72
 
