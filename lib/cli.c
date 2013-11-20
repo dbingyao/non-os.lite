@@ -29,18 +29,22 @@
 
 extern int FTSPI020_main(int argc, char * const argv[]);
 extern int do_spi_bootmode_test(int argc, char * const argv[]);
+extern int enable_d_cache(int argc, char * const argv[]);
+extern int disable_d_cache(int argc, char * const argv[]);
 
 int do_rd32(int argc, char * const  argv[]);
 int do_wr32(int argc, char * const  argv[]);
 int do_print_irqinfo(int argc, char * const  argv[]);
 int do_help(int argc, char * const argv[], cmd_t * tbl);
 
-cmd_t main_cmd_tbl[] = { 
+cmd_t main_cmd_tbl[] = {
 			{"md", "<addr> [num]", do_rd32},
 			{"mw", "<addr> <data> [num [inc]]", do_wr32},
 			{"irq","Interrupt information", do_print_irqinfo},
 			{"spi","FTSPI020 commands mode", FTSPI020_main},
 			{"spt", "Code on SPI flash test", do_spi_bootmode_test},
+			{"en_cache", "Enable D-cache and I-cache", enable_d_cache},
+			{"dis_cache", "Disable D-cache and I-cache", disable_d_cache},
 			{"?", "print all cmds", 0},
 			{0}
 			};
@@ -86,7 +90,7 @@ int scan_string(char *buf)
 			}
 			break;
         	}
-    
+
 	} while(ch != RETURN_KEY);
 
 	return count;
@@ -241,7 +245,7 @@ int cmd_exec(char *line, cmd_t * tbl)
 				do_help (2, argv, tbl);
 
 			break;
-		} 
+		}
 	}
 
 	return 0;
@@ -250,7 +254,7 @@ int cmd_exec(char *line, cmd_t * tbl)
 void shell(void)
 {
 	char cmdstr[CMDLEN];
-	
+
 	while (1) {
 #ifdef COPY_DATA_ONLY
 		puts("\nroot-d:> ");
