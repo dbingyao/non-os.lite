@@ -29,8 +29,6 @@
 
 extern int FTSPI020_main(int argc, char * const argv[]);
 extern int do_spi_bootmode_test(int argc, char * const argv[]);
-extern int enable_d_cache(int argc, char * const argv[]);
-extern int disable_d_cache(int argc, char * const argv[]);
 
 int do_rd32(int argc, char * const  argv[]);
 int do_wr32(int argc, char * const  argv[]);

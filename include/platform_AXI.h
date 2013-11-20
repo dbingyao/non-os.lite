@@ -46,7 +46,9 @@
  *                |
  *                +==========================================
  */
-
+# ifndef __ASSEMBLER__
+	#include <cpu/fa626te.h>
+#endif
 /**
  * AXI to APB bridge controller
  */
