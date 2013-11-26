@@ -19,11 +19,11 @@
 
 include $(TOP_DIR)/config.mk
 
-subdirs-y = console timer interrupt dma ftspi020 ftsmc020 cfi
+subdirs-y = console timer interrupt dma ftspi020 ftsmc020
 
 incl-makefile := $(patsubst %,%/Makefile ,$(subdirs-y))
 
-drvobjs-y := 
+drvobjs-y :=
 include $(incl-makefile)
 
 depfiles := $(drvobjs-y:.o=.c)
