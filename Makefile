@@ -56,7 +56,7 @@ version:
 	@echo " * Do not modify this file directly." >> include/version.h
 	@echo " */" >> include/version.h
 	@echo "" >> include/version.h
-	@date +'#define PRINT_IMG_VERS " Platform:$(PLATFORM) Type:$(IMAGE) (%C%y.%m.%d-%T)"' >> include/version.h
+	@date +'#define PRINT_IMG_VERS " Platform: $(PLATFORM) Type: $(IMAGE) (%C%y.%m.%d-%T)"' >> include/version.h
 	@echo "" >> include/version.h
 
 config: config.mk

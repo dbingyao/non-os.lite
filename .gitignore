@@ -11,3 +11,4 @@ tags
 *.archive
 config
 include/platform.h
+include/version.h

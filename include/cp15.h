@@ -16,35 +16,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#include <linux/types.h>
-#include <platform.h>
-#include <cp15.h>
-#include <common.h>
-#include <flash.h>
-#include <version.h>
-#include <malloc.h>
 
-extern int uart_init(int reg_base, int baud_rate);
-extern int board_init(void);
-
-extern flash_info_t flash_info[];       /* info for FLASH chips */
-
-void hardware_init()
+static inline void 
+enable_icache(void)
 {
-	enable_icache();
+	asm volatile (
+		/* Invalidate I-Cache all */
+		"mcr	p15, 0, %0, c7, c5, 0\n"
 
-	uart_init(UART0_REG_BASE, UART_BAUD_38400);
-
-	board_init();
-
-	prints("\n%s\n", PRINT_IMG_VERS);
-	prints("-------------------------------------------------\n");
-
-	mem_malloc_init();
-
-}
-
-void main()
-{
-	shell();
+		"mrc     p15, 0, r0, c1, c0, 0\n"
+		"orr     r0, r0, #0x00000002\n"     /* set bit 2 (A) Align */
+		"orr     r0, r0, #0x00001000\n"     /* set bit 12 (I) I-Cache */
+		"mcr     p15, 0, r0, c1, c0, 0\n"
+		:
+		: "r" (0)
+		);
 }

@@ -83,8 +83,8 @@ int do_irqinfo (void)
 	int i;
 
 	puts ("\nInterrupt-Information:\n\n"
-		"Nr  Routine   Arg       Count\n"
-		"-----------------------------\n");
+		"Nr  Routine   Arg   \n"
+		"--------------------\n");
 
 	for (i = 0; i < NR_IRQS; i++) {
 		if (IRQ_HANDLER[i].m_func != (interrupt_handler_t*) default_isr) {

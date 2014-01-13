@@ -19,7 +19,10 @@
 
 include $(TOP_DIR)/config.mk
 
-subdirs-y = console timer interrupt dma ftspi020 ftsmc020
+subdirs-y := console timer interrupt dma
+
+# Put your FPGA verification directory inside Makefile.drivers
+include Makefile.drivers
 
 incl-makefile := $(patsubst %,%/Makefile ,$(subdirs-y))
 
@@ -38,7 +41,11 @@ Makefile.depend: $(depfiles)
 -include Makefile.depend
 
 .PHONY: all
-all: drivers.a
+all: pr_obj drivers.a
+
+.PHONY: pr_obj
+pr_obj:
+	@echo "Drivers objs: $(drvobjs-y)"
 
 drivers.a: $(drvobjs-y)
 	$(AR) -rs $@ $^

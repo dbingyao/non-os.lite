@@ -27,7 +27,15 @@
 
 #define FMT_UINT	"%08X"
 
+#if defined(CONFIG_FTSPI020)
 extern int FTSPI020_main(int argc, char * const argv[]);
+#endif
+#if defined(CONFIG_FTSATA100)
+extern int FTSATA100_main(int argc, char * const argv[]);
+#endif
+#if defined(CONFIG_FTGMAC100)
+extern int FTGMAC100_main(int argc, char * const argv[]);
+#endif
 extern int do_spi_bootmode_test(int argc, char * const argv[]);
 
 int do_rd32(int argc, char * const  argv[]);
@@ -39,7 +47,15 @@ cmd_t main_cmd_tbl[] = {
 			{"md", "<addr> [num]", do_rd32},
 			{"mw", "<addr> <data> [num [inc]]", do_wr32},
 			{"irq","Interrupt information", do_print_irqinfo},
+#if defined(CONFIG_FTSPI020)
 			{"spi","FTSPI020 commands mode", FTSPI020_main},
+#endif
+#if defined(CONFIG_FTSATA100)
+			{"satah","FTSATA100 commands mode", FTSATA100_main},
+#endif
+#if defined(CONFIG_FTGMAC100)
+			{"gmac","FTGMAC100 commands mode", FTGMAC100_main},
+#endif
 			{"spt", "Code on SPI flash test", do_spi_bootmode_test},
 			{"en_cache", "Enable D-cache and I-cache", enable_d_cache},
 			{"dis_cache", "Disable D-cache and I-cache", disable_d_cache},

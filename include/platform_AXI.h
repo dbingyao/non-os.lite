@@ -139,7 +139,7 @@
 #define TIMERC_IRQ1   		1
 #define TIMERC_IRQ2   		2
 #define TIMERC_IRQ3   		3
-#define TIMER_CLOCK     	37748736
+#define TIMER_CLOCK     	50000000
 #define CONFIG_SYS_HZ   	1000    /* timer ticks per second */
 #define TIMER_USE_EXTCLK	0
 
@@ -160,6 +160,12 @@
  */
 #define FTSATA100_REG_BASE	0xC0000000
 #define FTSATA100_IRQ     	10
+
+/**
+ * FTGMAC100 MAC Host Controller
+ */
+#define FTGMAC100_REG_BASE	0xC0000000
+#define FTGMAC100_IRQ     	13
 
 /**
  * Common for all platforms

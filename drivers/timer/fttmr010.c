@@ -132,7 +132,7 @@ void disable_timer(int timer_index)
 
 	if (timer_index < 1 || timer_index > 3) {
 		prints("%s: index out of range\n", __func__);
-		return 1;
+		return ;
 	}
 
 	idx = timer_index - 1;

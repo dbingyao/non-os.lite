@@ -5,7 +5,7 @@ ENTRY(_stext)
 MEMORY
 {
   /*RAM (xrw)       : ORIGIN = 0x00000000, LENGTH = 0x10000000 *//*256M*/
-  RAM (xrw)       : ORIGIN = 0x00000000, LENGTH = 0x4000000 /*256M*/
+  RAM (xrw)       : ORIGIN = 0x00000000, LENGTH = 0x20000000 /*64M @ A320, 512M @AXI */
 }
 
 /* define stack size and heap size here */
