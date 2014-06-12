@@ -38,7 +38,7 @@ endif
 ELFNAME := bin/$(IMAGE)-nonos-$(COPYSECT)-$(PLATFORM)-$(shell date +'%C%y%m%d')
 
 dirs-y := lib board cpu drivers app
-objs-y := app/app.a drivers/drivers.a board/board.a lib/libUtils.a cpu/cpu.a
+objs-y := app/app.a drivers/drivers.a board/board.a lib/libgen.a lib/libm.a lib/libc.a cpu/cpu.a
 
 .PHONY: all
 all: print version config $(dirs-y) $(ELFNAME).elf
@@ -84,10 +84,10 @@ $(ELFNAME).elf: start.o $(objs-y)
 
 .PHONY:clean
 clean:
-	@find ./ -name '*.[oa]' | xargs rm -rf
+	@find -L ./ -name '*.[oa]' | xargs rm -rf
 
 .PHONY : distclean
 distclean:
-	find . -name "Makefile.depend" | xargs rm -f
-	find . -name "*.o" -o -name "*.a" -o -name ".*.swp" -o -name "*.map" -o -name "*.elf" \
+	find -L ./ -name "Makefile.depend" | xargs rm -f
+	find -L ./ -name "*.o" -o -name "*.a" -o -name ".*.swp" -o -name "*.map" -o -name "*.elf" \
 	-o -name "*.bin" -o -name "*.dump" | xargs rm -f
