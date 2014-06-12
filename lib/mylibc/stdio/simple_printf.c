@@ -533,7 +533,9 @@ static int vsnprintf_internal(char *buf, size_t size, const char *fmt,
 			end[-1] = '\0';
 	}
 
-	*str = '\0';
+	if (str)
+		*str = '\0';
+
 	/* the trailing null byte doesn't count towards the total */
 	return str-buf;
 }
