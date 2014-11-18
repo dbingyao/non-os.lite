@@ -95,6 +95,7 @@ char *ftuart_gets(char *s)
 	do {
 		c = ftuart_getc();
 		s[i++] = (char)c;
+		ftuart_putc(c);
 	} while(c && c != -1 && c != '\r' && c != '\n');
 
 	if (c)
