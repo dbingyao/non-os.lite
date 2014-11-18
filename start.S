@@ -134,6 +134,7 @@ clbss_e:
 #endif
 	b	main
 
+#if defined ROM_NOR || defined ROM_SPI
 verify_copy:
 	mov	r9, lr
 
@@ -157,6 +158,7 @@ copy_error:
 	led	0x40000000
 2:
 	b	2b
+#endif
 
 #ifdef COPY_DATA_ONLY
 _lma_addr:
