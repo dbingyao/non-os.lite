@@ -156,4 +156,30 @@ extern void irq_set_disable(int irq);
 /* Timer controller */
 void disable_timer(int timer_index);
 extern int init_timer(int timer_index, int load_val, int use_extclk, void timer_callback(void));
+
+/*
+ * Output a debug text when condition "cond" is met. The "cond" should be
+ * computed by a preprocessor in the best case, allowing for the best
+ * optimization.
+ */
+#define debug_cond(cond, fmt, args...)          \
+        do {                                    \
+                if (cond)                       \
+                        prints(fmt, ##args);    \
+        } while (0)
+
+#ifdef DEBUG
+#define _DEBUG  1
+#else
+#define _DEBUG  0
+#endif
+
+#define debug(fmt, args...)                     \
+        debug_cond(_DEBUG, fmt, ##args)
+
+#define error(fmt, args...) do {                                        \
+                printf("ERROR: " fmt "\nat %s:%d/%s()\n",               \
+                        ##args, __FILE__, __LINE__, __func__);          \
+} while (0)
+
 #endif /* _COMMON_H */
