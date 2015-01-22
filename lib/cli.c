@@ -21,6 +21,7 @@
 #include <stdio.h>
 
 #include <common.h>
+#include <net_core.h>
 #include <types.h>
 #include <platform.h>
 
@@ -33,13 +34,17 @@ extern int FTSPI020_main(int argc, char * const argv[]);
 #if defined(CONFIG_FTSATA100)
 extern int FTSATA100_main(int argc, char * const argv[]);
 #endif
-#if defined(CONFIG_FTGMAC100)
-extern int FTGMAC100_main(int argc, char * const argv[]);
+#if defined(CONFIG_FTGMAC030)
+extern int FTGMAC030_main(int argc, char * const argv[]);
 #endif
 extern int do_spi_bootmode_test(int argc, char * const argv[]);
+extern int enable_d_cache(int argc, char * const argv[]);
+extern int disable_d_cache(int argc, char * const argv[]);
 
 int do_rd32(int argc, char * const  argv[]);
 int do_wr32(int argc, char * const  argv[]);
+int do_tftpboot(int argc, char * const  argv[]);
+int do_ping(int argc, char * const  argv[]);
 int do_print_irqinfo(int argc, char * const  argv[]);
 int do_help(int argc, char * const argv[], cmd_t * tbl);
 
@@ -53,12 +58,14 @@ cmd_t main_cmd_tbl[] = {
 #if defined(CONFIG_FTSATA100)
 			{"satah","FTSATA100 commands mode", FTSATA100_main},
 #endif
-#if defined(CONFIG_FTGMAC100)
-			{"gmac","FTGMAC100 commands mode", FTGMAC100_main},
+#if defined(CONFIG_FTGMAC030)
+			{"gmac","FTGMAC030 commands mode", FTGMAC030_main},
 #endif
 			{"spt", "Code on SPI flash test", do_spi_bootmode_test},
 			{"en_cache", "Enable D-cache and I-cache", enable_d_cache},
 			{"dis_cache", "Disable D-cache and I-cache", disable_d_cache},
+			{"tftpboot", "<filename> [loadaddr] [serverip]", do_tftpboot},
+			{"ping", "<ipaddr>", do_ping},
 			{"?", "print all cmds", 0},
 			{0}
 			};
@@ -194,6 +201,66 @@ int do_wr32(int argc, char * const  argv[])
 	}
 
 	return (0);
+}
+
+#define CONFIG_MACH_TYPE            758 /* Faraday */
+ulong load_addr = 0x2000000;
+
+/* tftpboot <filename> [loadaddr] [serverip] */
+int do_tftpboot(int argc, char * const  argv[])
+{
+	void (*kernel_entry)(int zero, int arch, unsigned int params);
+
+	if (argc < 2)
+		return 1;
+
+	if (argc == 3)
+		load_addr = strtoul(argv[2], NULL, 16);
+
+	if (argc == 4)
+		NetServerIP = string_to_ip((const char *) argv[3]);
+
+	/* Check if we had MAC controller */
+	if (!eth_initialize(argv[1]))
+		return 0;
+
+	if (NetLoop(TFTPGET) < 0) {
+		prints("Download error\n");
+		return 0;
+	}
+
+	disable_d_cache(0, NULL);
+
+	kernel_entry = (void (*)(int, int, unsigned int)) load_addr;
+
+	/* Never return */
+	kernel_entry(0, CONFIG_MACH_TYPE, 0);
+
+	return 0;
+}
+
+/* ping <ipaddr> */
+int do_ping(int argc, char * const argv[])
+{
+        if (argc < 2)
+                return -1;
+
+	/* Check if we had MAC controller */
+	if (!eth_initialize(NULL))
+		return 0;
+
+	NetPingIP = string_to_ip(argv[1]);
+	if (NetPingIP == 0)
+		return 1;
+
+	if (NetLoop(PING) < 0) {
+		prints("ping failed; host %s is not alive\n", argv[1]);
+		return 1;
+	}
+
+	prints("host %s is alive\n", argv[1]);
+
+	return 0;
 }
 
 extern int do_irqinfo (void);

@@ -21,7 +21,7 @@ export TOP_DIR ?= $(shell pwd)
 
 include config.mk
 
-LDFLAGS += -Ttext 0x00000000
+LDFLAGS += -Ttext 0x10000000
 
 # Move data section to memory, text section
 # remain at flash
@@ -37,8 +37,8 @@ endif
 
 ELFNAME := bin/$(IMAGE)-nonos-$(COPYSECT)-$(PLATFORM)-$(shell date +'%C%y%m%d')
 
-dirs-y := lib board cpu drivers app
-objs-y := app/app.a drivers/drivers.a board/board.a lib/libgen.a lib/libm.a lib/libc.a cpu/cpu.a
+dirs-y := lib board cpu net drivers app
+objs-y := app/app.a drivers/drivers.a board/board.a lib/libgen.a lib/libm.a lib/libc.a cpu/cpu.a net/net.a
 
 .PHONY: all
 all: print version config $(dirs-y) $(ELFNAME).elf
