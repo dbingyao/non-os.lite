@@ -57,7 +57,7 @@ typedef unsigned int        dma_addr_t;
 #else
 #define __bitwise
 #endif
-
+#if 0
 typedef __u16 __bitwise     __le16;
 typedef __u16 __bitwise     __be16;
 typedef __u32 __bitwise     __le32;
@@ -66,7 +66,7 @@ typedef __u64 __bitwise     __le64;
 typedef __u64 __bitwise     __be64;
 typedef __u16 __bitwise     __sum16;
 typedef __u32 __bitwise     __wsum;
-
+#endif
 typedef uint __bitwise__    gfp_t;
 
 #endif /* _LINUX_TYPES_H */
