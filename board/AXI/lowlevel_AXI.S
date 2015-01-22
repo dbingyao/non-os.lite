@@ -79,6 +79,20 @@ ddr3_config_table:
 	.long	DDRC_REG_BASE + 0x34, 0x03030303
 	.long	DDRC_REG_BASE + 0x38, 0x03030303
 	.long	DDRC_REG_BASE + 0x74, 0x11111111
+
+#elif defined CONFIG_FTGMAC030
+	.long	DDRC_REG_BASE, 0x08079e01
+	.long	DDRC_REG_BASE + 0x08, 0x00040452
+	.long	DDRC_REG_BASE + 0x10, 0x10005624
+	.long	DDRC_REG_BASE + 0x14, 0x05010201
+	.long	DDRC_REG_BASE + 0x18, 0x12111111
+	.long	DDRC_REG_BASE + 0x1C, 0x41002690
+	.long	DDRC_REG_BASE + 0x20, 0x00002f41
+	.long	DDRC_REG_BASE + 0x24, 0x00000000
+	.long	DDRC_REG_BASE + 0x34, 0x03030303
+	.long	DDRC_REG_BASE + 0x38, 0x03030303
+	.long	DDRC_REG_BASE + 0x3C, 0x00730013
+	.long	DDRC_REG_BASE + 0x74, 0x00002222
 #else
 	.long	DDRC_REG_BASE, 0x00074111
 	.long	DDRC_REG_BASE + 0x08, 0x00040432
@@ -101,8 +115,8 @@ ddr3_config_table:
 CalibDdr:
 	mov	r11, lr
 	/* copy 1KB data from ROM */
-	ldr	r0, =0xb0000000
-	ldr	r1, =0x00000000
+	ldr	r0, =0x00000000
+	ldr	r1, =0x10000000
 	add	r2, r1, #0x400
 1:
 	ldmia	r0!, {r3-r10}		/* copy from source address [r0]    */
@@ -151,8 +165,8 @@ set_msdly:
 	str	r3, [r4]
 
 check:
-	ldr	r0, =0xb0000000
-	ldr	r1, =0x00000000
+	ldr	r0, =0x00000000
+	ldr	r1, =0x10000000
 	/* Dummy write after set msdly */
 	ldr	r3, [r0]
 	str	r3, [r1]
